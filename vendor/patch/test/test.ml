@@ -5,10 +5,10 @@ let hunk_eq a b =
   a.mine_len = b.mine_len &&
   a.their_start = b.their_start &&
   a.their_len = b.their_len &&
-  List.length a.mine = List.length b.mine &&
-  List.length a.their = List.length b.their &&
-  List.for_all (fun x -> List.mem x b.mine) a.mine &&
-  List.for_all (fun x -> List.mem x b.their) a.their
+  List.length (mine a) = List.length (mine b) &&
+  List.length (their a) = List.length (their b) &&
+  List.for_all (fun x -> List.mem x (mine b)) (mine a) &&
+  List.for_all (fun x -> List.mem x (their b)) (their a)
 
 let test_hunk = Alcotest.testable Patch.pp_hunk hunk_eq
 
@@ -173,41 +173,51 @@ let basic_diffs =
 
 let basic_hunks =
   let open Patch in
-  let hunk1 = [ { mine_start = 0 ; mine_len = 1 ; mine = ["foo"] ;
-                  their_start = 0 ; their_len = 1 ; their = ["foobar"] } ]
+  let hunk1 = [ { mine_start = 0 ; mine_len = 1 ;
+                  their_start = 0 ; their_len = 1 ;
+                  lines = [ `Mine "foo"; `Their "foobar" ] } ]
   in
   let diff = { operation = Rename ("a", "b") ; hunks = hunk1 ; mine_no_nl = false ; their_no_nl = false } in
   let hunk2 =
-    [ { mine_start = 1 ; mine_len = 7 ; mine = [ "bar" ; "baz" ; "boo" ; "foo" ; "bar" ; "baz" ; "boo" ] ;
-        their_start = 1 ; their_len = 7 ; their = [ "bar" ; "baz" ; "boo" ; "foo2" ; "bar" ; "baz" ; "boo" ] } ]
+    [ { mine_start = 1 ; mine_len = 7 ;
+        their_start = 1 ; their_len = 7 ;
+        lines = [ `Common "bar" ; `Common "baz" ; `Common "boo" ; `Mine "foo"; `Their "foo2" ; `Common "bar" ; `Common "baz" ; `Common "boo" ] } ]
   in
   let hunk3 = [
-    { mine_start = 0 ; mine_len = 5 ; mine = [ "foo" ; "bar" ; "baz" ; "boo" ; "foo" ] ;
-      their_start = 0 ; their_len = 5 ; their = [ "foo" ; "bar2" ; "baz" ; "boo" ; "foo" ] } ;
-    { mine_start = 7 ; mine_len = 4 ; mine = [ "boo" ; "foo" ; "bar" ; "baz" ] ;
-      their_start = 7 ; their_len = 4 ; their = [ "boo" ; "foo" ; "bar" ; "baz3" ] }
+    { mine_start = 0 ; mine_len = 5 ;
+      their_start = 0 ; their_len = 5 ;
+      lines = [ `Common "foo" ; `Mine "bar"; `Their "bar2" ; `Common "baz" ; `Common "boo" ; `Common "foo" ] } ;
+    { mine_start = 7 ; mine_len = 4 ;
+      their_start = 7 ; their_len = 4 ;
+      lines = [ `Common "boo" ; `Common "foo" ; `Common "bar" ; `Mine "baz"; `Their "baz3" ] }
   ] in
   let hunk4 = [
-    { mine_start = 0 ; mine_len = 6 ; mine = [ "foo" ; "foo" ; "foo" ; "foo" ; "foo" ; "foo" ] ;
-      their_start = 0 ; their_len = 7 ; their = [ "foo" ; "foo" ; "foo" ; "foo3" ; "foo" ; "foo" ; "foo" ] } ;
-    { mine_start = 8 ; mine_len = 6 ; mine = [ "foo" ; "foo" ; "foo" ; "foo" ; "foo" ; "foo" ] ;
-      their_start = 9 ; their_len = 7 ; their = [ "foo" ; "foo" ; "foo" ; "foo5" ; "foo" ; "foo" ; "foo" ] } ;
-    { mine_start = 30 ; mine_len = 6 ; mine = [ "foo" ; "foo" ; "foo" ; "foo" ; "foo" ; "foo" ] ;
-      their_start = 32 ; their_len = 11 ; their = [ "foo" ; "foo" ; "foo" ; "bar" ; "foo" ; "foo" ; "foo" ; "foo" ; "foo" ; "foo" ; "bar2" ] }
+    { mine_start = 0 ; mine_len = 6 ;
+      their_start = 0 ; their_len = 7 ;
+      lines = [ `Common "foo" ; `Common "foo" ; `Common "foo" ; `Their "foo3" ; `Common "foo" ; `Common "foo" ; `Common "foo" ] } ;
+    { mine_start = 8 ; mine_len = 6 ;
+      their_start = 9 ; their_len = 7 ;
+      lines = [ `Common "foo" ; `Common "foo" ; `Common "foo" ; `Their "foo5" ; `Common "foo" ; `Common "foo" ; `Common "foo" ] } ;
+    { mine_start = 30 ; mine_len = 6 ;
+      their_start = 32 ; their_len = 11 ;
+      lines = [ `Common "foo" ; `Common "foo" ; `Common "foo" ; `Their "bar" ; `Common "foo" ; `Common "foo" ; `Common "foo" ; `Their "foo" ; `Their "foo" ; `Their "foo" ; `Their "bar2" ] }
   ] in
   let hunk5= [
-    { mine_start = 0 ; mine_len = 0 ; mine = [] ;
-      their_start = 0 ; their_len = 1 ; their = [ "foo" ] }
+    { mine_start = 0 ; mine_len = 0 ;
+      their_start = 0 ; their_len = 1 ;
+      lines = [ `Their "foo" ] }
   ] in
   let diff5 = { diff with operation = Create "b" ; hunks = hunk5 } in
   let hunk6 = [
-    { mine_start = 0 ; mine_len = 1 ; mine = [ "foo" ] ;
-      their_start = 0 ; their_len = 0 ; their = [ ] }
+    { mine_start = 0 ; mine_len = 1 ;
+      their_start = 0 ; their_len = 0 ;
+      lines = [ `Mine "foo" ] }
   ] in
   let diff6 = { diff with operation = Delete "a" ; hunks = hunk6 } in
   let hunk7 = [
-    { mine_start = 0 ; mine_len = 1 ; mine = [ "foo" ] ;
-      their_start = 0 ; their_len = 2 ; their = [ "foo" ; "foo" ] }
+    { mine_start = 0 ; mine_len = 1 ;
+      their_start = 0 ; their_len = 2 ;
+      lines = [ `Common "foo" ; `Their "foo" ] }
   ] in
   let diff7 = { diff with operation = Rename ("a", "b") ; hunks = hunk7 } in
   List.map (fun d -> [ d ])
@@ -343,23 +353,27 @@ let multi_diff = {|
 
 let multi_hunks =
   let open Patch in
-  let hunk1 = [ { mine_start = 0 ; mine_len = 1 ; mine = ["bar"] ;
-                  their_start = 0 ; their_len = 1 ; their = ["foobar"] } ]
+  let hunk1 = [ { mine_start = 0 ; mine_len = 1 ;
+                  their_start = 0 ; their_len = 1 ;
+                  lines = [ `Mine "bar"; `Their "foobar" ] } ]
   in
   let diff1 = { operation = Rename ("foo", "bar") ; hunks = hunk1 ; mine_no_nl = false ; their_no_nl = false } in
   let hunk2 =
-    [ { mine_start = 0 ; mine_len = 1 ; mine = [ "baz" ] ;
-        their_start = 0 ; their_len = 0 ; their = [] } ]
+    [ { mine_start = 0 ; mine_len = 1 ;
+        their_start = 0 ; their_len = 0 ;
+        lines = [ `Mine "baz" ] } ]
   in
   let diff2 = { operation = Delete "foobar" ; hunks = hunk2 ; mine_no_nl = false ; their_no_nl = false } in
   let hunk3 = [
-    { mine_start = 0 ; mine_len = 0 ; mine = [ ] ;
-      their_start = 0 ; their_len = 1 ; their = [ "baz" ] }
+    { mine_start = 0 ; mine_len = 0 ;
+      their_start = 0 ; their_len = 1 ;
+      lines = [ `Their "baz" ] }
   ] in
   let diff3 = { operation = Create "baz" ; hunks = hunk3 ;  mine_no_nl = false ; their_no_nl = true } in
   let hunk4 = [
-    { mine_start = 0 ; mine_len = 1 ; mine = [ "foobarbaz" ] ;
-      their_start = 0 ; their_len = 1 ; their = [ "foobar" ] }
+    { mine_start = 0 ; mine_len = 1 ;
+      their_start = 0 ; their_len = 1 ;
+      lines = [ `Mine "foobarbaz"; `Their "foobar" ] }
   ] in
   let diff4 = { operation = Edit "foobarbaz" ; hunks = hunk4 ;  mine_no_nl = false ; their_no_nl = false } in
   [ diff1 ; diff2 ; diff3 ; diff4 ]

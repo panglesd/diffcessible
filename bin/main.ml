@@ -1,7 +1,10 @@
 open Diffcessible
 
 let main () =
-  Interactive_viewer.start ()
+  let file = In_channel.open_bin "diff.example" in
+  let s = In_channel.input_all file in
+  let patch = Patch.to_diffs s in
+  Interactive_viewer.start patch
 
 open Cmdliner
 

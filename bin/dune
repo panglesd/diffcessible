@@ -1,4 +1,4 @@
 (executable
  (public_name diffcessible)
  (name main)
- (libraries diffcessible cmdliner))
+ (libraries diffcessible cmdliner patch))

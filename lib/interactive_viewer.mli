@@ -1,5 +1,3 @@
 (** Render and navigate through a diff. *)
 
-type patch = unit
-
-val start : patch -> unit
+val start : Patch.t list -> unit

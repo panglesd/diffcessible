@@ -46,16 +46,20 @@ end
 type hunk = {
   mine_start : int ;
   mine_len : int ;
-  mine : string list ;
   their_start : int ;
   their_len : int ;
-  their : string list ;
+  lines : [ `Common of string | `Mine of string | `Their of string ] list ;
 }
 
 let unified_diff hunk =
   (* TODO *)
-  String.concat "\n" (List.map (fun line -> "-" ^ line) hunk.mine @
-                      List.map (fun line -> "+" ^ line) hunk.their)
+  String.concat "\n"
+    (List.map
+       (function
+         | `Common line -> "  " ^ line
+         | `Mine line -> "- " ^ line
+         | `Their line -> "+ " ^ line)
+       hunk.lines)
 
 let pp_hunk ppf hunk =
   Format.fprintf ppf "@@@@ -%d,%d +%d,%d @@@@\n%s"
@@ -81,11 +85,21 @@ let drop data num =
   try drop data num with
   | Invalid_argument _ -> invalid_arg ("drop " ^ string_of_int num ^ " on " ^ string_of_int (List.length data))
 
+let their hunk =
+  List.filter_map
+    (function `Common l | `Their l -> Some l | `Mine _ -> None)
+    hunk.lines
+
+let mine hunk =
+  List.filter_map
+    (function `Common l | `Mine l -> Some l | `Their _ -> None)
+    hunk.lines
+
 (* TODO verify that it applies cleanly *)
 let apply_hunk old (index, to_build) hunk =
   try
     let prefix = take (drop old index) (hunk.mine_start - index) in
-    (hunk.mine_start + hunk.mine_len, to_build @ prefix @ hunk.their)
+    (hunk.mine_start + hunk.mine_len, to_build @ prefix @ their hunk)
   with
   | Invalid_argument _ -> invalid_arg ("apply_hunk " ^ string_of_int index ^ " old len " ^ string_of_int (List.length old) ^
                                        " hunk start " ^ string_of_int hunk.mine_start ^ " hunk len " ^ string_of_int hunk.mine_len)
@@ -116,15 +130,15 @@ let count_to_sl_sl data =
   else
     None
 
-let sort_into_bags dir mine their m_nl t_nl str =
+let sort_into_bags dir lines m_nl t_nl str =
   if String.length str = 0 then
     None
   else if String.is_prefix ~prefix:"---" str then
     None
   else match String.get str 0, String.slice ~start:1 str with
-    | ' ', data -> Some (`Both, (data :: mine), (data :: their), m_nl, t_nl)
-    | '+', data -> Some (`Their, mine, (data :: their), m_nl, t_nl)
-    | '-', data -> Some (`Mine, (data :: mine), their, m_nl, t_nl)
+    | ' ', data -> Some (`Both, `Common data :: lines, m_nl, t_nl)
+    | '+', data -> Some (`Their, `Their data :: lines, m_nl, t_nl)
+    | '-', data -> Some (`Mine, `Mine data :: lines, m_nl, t_nl)
     | '\\', data ->
       (* diff: 'No newline at end of file' turns out to be context-sensitive *)
       (* so: -xxx\n\\No newline... means mine didn't have a newline *)
@@ -135,21 +149,28 @@ let sort_into_bags dir mine their m_nl t_nl str =
         | `Mine -> true, t_nl
         | `Their -> m_nl, true
       in
-      Some (dir, mine, their, my_nl, their_nl)
+      Some (dir, lines, my_nl, their_nl)
     | _ -> None
 
 let to_hunk count data mine_no_nl their_no_nl =
   match count_to_sl_sl count with
   | None -> None, mine_no_nl, their_no_nl, count :: data
   | Some ((mine_start, mine_len), (their_start, their_len)) ->
-    let rec step dir mine their mine_no_nl their_no_nl = function
-      | [] -> (List.rev mine, List.rev their, mine_no_nl, their_no_nl, [])
-      | x::xs -> match sort_into_bags dir mine their mine_no_nl their_no_nl x with
-        | Some (dir, mine, their, mine_no_nl', their_no_nl') -> step dir mine their mine_no_nl' their_no_nl' xs
-        | None -> (List.rev mine, List.rev their, mine_no_nl, their_no_nl, x :: xs)
-    in
-    let mine, their, mine_no_nl, their_no_nl, rest = step `Both [] [] mine_no_nl their_no_nl data in
-    (Some { mine_start ; mine_len ; mine ; their_start ; their_len ; their }, mine_no_nl, their_no_nl, rest)
+      let rec step dir lines mine_no_nl their_no_nl = function
+        | [] -> (List.rev lines, mine_no_nl, their_no_nl, [])
+        | x :: xs -> (
+            match sort_into_bags dir lines mine_no_nl their_no_nl x with
+            | Some (dir, lines, mine_no_nl', their_no_nl') ->
+                step dir lines mine_no_nl' their_no_nl' xs
+            | None -> (List.rev lines, mine_no_nl, their_no_nl, x :: xs))
+      in
+      let lines, mine_no_nl, their_no_nl, rest =
+        step `Both [] mine_no_nl their_no_nl data
+      in
+      ( Some { mine_start; mine_len; lines; their_start; their_len },
+        mine_no_nl,
+        their_no_nl,
+        rest )
 
 let rec to_hunks (mine_no_nl, their_no_nl, acc) = function
   | [] -> (List.rev acc, mine_no_nl, their_no_nl, [])
@@ -277,7 +298,7 @@ let patch filedata diff =
   | Create _ ->
     begin match diff.hunks with
       | [ the_hunk ] ->
-        let d = the_hunk.their in
+        let d = their the_hunk in
         let lines = if diff.their_no_nl then d else d @ [""] in
         Some (String.concat "\n" lines)
       | _ -> assert false

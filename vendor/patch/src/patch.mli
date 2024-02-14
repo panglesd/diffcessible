@@ -1,12 +1,13 @@
 type hunk = {
   mine_start : int ;
   mine_len : int ;
-  mine : string list ;
   their_start : int ;
   their_len : int ;
-  their : string list ;
+  lines : [ `Common of string | `Mine of string | `Their of string ] list ;
 }
 
+val mine : hunk -> string list
+val their : hunk -> string list
 val pp_hunk : Format.formatter -> hunk -> unit
 
 type operation =

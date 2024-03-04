@@ -11,7 +11,7 @@
 
 (maintainers "Paul-Elliot <peada@free.fr>" "Jules Aguillon <jules@j3s.fr>")
 
-(license LICENSE)
+(license MIT)
 
 (documentation https://url/to/documentation)
 
@@ -19,7 +19,14 @@
  (name diffcessible)
  (synopsis "A short synopsis")
  (description "A longer description")
- (depends ocaml dune)
+ (depends
+  (ocaml
+   (>= 4.14))
+  dune
+  cmdliner
+  seq
+  (notty
+   (>= 0.2)))
  (tags
   (topics "to describe" your project)))
 

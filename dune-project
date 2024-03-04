@@ -5,7 +5,7 @@
 (generate_opam_files true)
 
 (source
- (github username/reponame))
+ (github panglesd/diffcessible))
 
 (authors "Paul-Elliot <peada@free.fr>" "Jules Aguillon <jules@j3s.fr>")
 
@@ -13,12 +13,10 @@
 
 (license MIT)
 
-(documentation https://url/to/documentation)
-
 (package
  (name diffcessible)
- (synopsis "A short synopsis")
- (description "A longer description")
+ (synopsis "An accessible diff viewer")
+ (description "A TUI diff viewer aimed at being accessible.")
  (depends
   (ocaml
    (>= 4.14))
@@ -28,6 +26,4 @@
   (notty
    (>= 0.2)))
  (tags
-  (topics "to describe" your project)))
-
-; See the complete stanza docs at https://dune.readthedocs.io/en/stable/dune-files.html#dune-project
+  (diff "diff viewer" accessibility)))

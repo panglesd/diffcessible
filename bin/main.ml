@@ -9,7 +9,7 @@ let main file_path =
 
 let file_arg =
   let doc = "Path to the file containing the Git diff." in
-  Arg.(required & opt (some string) None & info ["f"; "file"] ~docv:"FILE" ~doc)
+  Arg.(required & pos 0 (some string) None & info [] ~docv:"FILE" ~doc)
 
 let cmd =
   let doc = "Render Git diffs in an accessible way." in

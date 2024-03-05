@@ -1,7 +1,7 @@
 open Nottui
 module W = Nottui_widgets
 open Lwd_infix
-open Zipper
+(* open Zipper *)
 
 let index_v = Lwd.var 0
 (* let index = Lwd.get index_v *)

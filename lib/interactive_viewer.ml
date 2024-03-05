@@ -1,64 +1,68 @@
 open Nottui
 module W = Nottui_widgets
 open Lwd_infix
-(* open Zipper *)
+open Zipper
 
-let index_v = Lwd.var 0
-(* let index = Lwd.get index_v *)
+let zipper_of_list (lst : 'a list) : 'a t Lwd.var = Lwd.var (zipper_of_list lst)
 
-(* convert the list of patches into a zipper *)
-let zipper_of_patches patches = Lwd.var (Zipper.zipper_of_list patches)
+(* let current_patch (lst : 'a list) : 'a Lwd.t = *)
+(*   let z = zipper_of_list lst in *)
+(*   Lwd.pure (get_focus (Lwd.peek z)) *)
 
-let current_patch (patches : Patch.t list) : (Patch.t option Lwd.t) =
-  let z_patches = zipper_of_patches patches in 
-  let z = Lwd.peek z_patches in 
-  let current_patch = Zipper.get_focus z in
-  Lwd.pure (Some current_patch)
+let string_of_operation (op : Patch.operation) : string =
+  match op with
+  | Edit e -> Printf.sprintf "Edited %s" e
+  | Rename (n1, n2) -> Printf.sprintf "Renamed with modifications %s to %s" n1 n2
+  | Delete d -> Printf.sprintf "Deleted %s" d
+  | Create c -> Printf.sprintf "Created %s" c
+  | Rename_only (n1, n2) -> Printf.sprintf "Renamed %s to %s" n1 n2
 
+(* let attr_of_operation (op : Patch.operation) : Notty.A.t = *)
+(*   match op with *)
+(*   | Edit _ -> Notty.A.(fg lightblue) *)
+(*   | Rename _ -> Notty.A.(fg lightgreen) *)
+(*   | Delete _ -> Notty.A.(fg lightred) *)
+(*   | Create _ -> Notty.A.(fg lightyellow) *)
+(*   | Rename_only _ -> Notty.A.(fg lightmagenta)  *)
+(**)
+(* let display_operation (op : Patch.operation) : Ui.t = *)
+(*   W.string ~attr:(attr_of_operation op) (string_of_operation op) *)
 
-(* let current_patch patches = *)
-(*   let$ index = index in *)
-(*   List.nth_opt patches index *)
+let string_of_hunk (hunk : Patch.hunk) : string =
+  Format.asprintf "%a" Patch.pp_hunk hunk
 
-let string_of_operation = Format.asprintf "%a" (Patch.pp_operation ~git:false)
-let string_of_hunk = Format.asprintf "%a" Patch.pp_hunk
+let operation_info (z_patches : Patch.t t Lwd.var) : ui Lwd.t =
+  let$ z = Lwd.get z_patches in
+  W.string (Printf.sprintf "Operation %d out of %d" (get_current_index z + 1) (get_total_length z))
 
-let current_operation (patches : Patch.t list) =
-  let$ current_patch = current_patch patches in
-  match current_patch with
-  | Some p -> W.string @@ string_of_operation p.Patch.operation
-  | None -> W.string "No operation"
+let current_operation (z_patches : Patch.t t Lwd.var) : ui Lwd.t =
+  let$ z = Lwd.get z_patches in
+  let p = get_focus z in
+  W.string (string_of_operation p.Patch.operation)
 
-let current_hunks (patches : Patch.t list) =
-  let$ current_patch = current_patch patches in
-  match current_patch with
-  | Some p ->
-      Ui.vcat @@ List.map (fun p -> W.string @@ string_of_hunk p) p.Patch.hunks
-  | None -> W.string "No operation"
+let current_hunks (z_patches : Patch.t t Lwd.var) : ui Lwd.t =
+  let$ z = Lwd.get z_patches in
+  let p = get_focus z in
+  Ui.vcat (List.map (fun h -> W.string (string_of_hunk h)) p.Patch.hunks)
 
-(* * helper function to navigate between patches via `Next or `Prev *)
-let navigate direction zipper_of_patches =
-  let z = Lwd.peek zipper_of_patches in
-  match direction with
-  | `Next ->
-      if List.length (Zipper.get_after z) > 0 then begin
-        Lwd.set zipper_of_patches (Zipper.next z);
-        Lwd.set index_v ((Lwd.peek index_v) + 1)
-      end
-  | `Prev ->
-      if List.length (Zipper.get_before z) > 0 then begin
-        Lwd.set zipper_of_patches (Zipper.prev z);
-        Lwd.set index_v ((Lwd.peek index_v) - 1)
-      end
+type direction = Prev | Next
+
+let navigate (z_patches : Patch.t t Lwd.var) (dir : direction) : unit =
+  let z = Lwd.peek z_patches in
+  match dir with
+  | Prev -> Lwd.set z_patches (prev z)
+  | Next -> Lwd.set z_patches (next z)
+  
 (* let pure_str s = Lwd.pure (W.string s) *)
 let quit = Lwd.var false
 
 let view (patches : Patch.t list) =
-  let zipper_of_patches = zipper_of_patches patches in 
+  let z_patches = zipper_of_list patches in 
   W.vbox
     [
-      current_operation patches;
-      W.scrollbox @@ current_hunks patches;
+      operation_info z_patches;
+      current_operation z_patches;
+      W.scrollbox @@ current_hunks z_patches;
       Lwd.pure
       @@ Ui.keyboard_area
            (function
@@ -66,13 +70,13 @@ let view (patches : Patch.t list) =
                  Lwd.set quit true;
                  `Handled
              | `ASCII 'n', [] ->
-                  navigate `Next zipper_of_patches;
+                  navigate z_patches Next;
                  `Handled
              | `ASCII 'p', [] ->
-                  navigate `Prev zipper_of_patches;
+                  navigate z_patches Prev;
                  `Handled
              | _ -> `Unhandled)
-           (W.string "Type 'q' to quit, 'n' for next hunk, 'p' for previous hunk.");
+           (W.string "Type 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation");
     ]
 
 let start patch = Ui_loop.run ~quit ~tick_period:0.2 (view patch)

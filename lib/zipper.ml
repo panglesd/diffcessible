@@ -32,3 +32,4 @@ let get_after z = z.after
 let get_total_length z = z.total_length
 
 let get_current_index z = z.current_index
+

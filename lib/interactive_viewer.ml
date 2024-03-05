@@ -9,7 +9,18 @@ let current_patch patches =
   let$ index = index in
   List.nth_opt patches index
 
-let string_of_operation = Format.asprintf "%a" (Patch.pp_operation ~git:false)
+(* let string_of_operation = Format.asprintf "%a" (Patch.pp_operation ~git:false) *)
+
+let string_of_operation operation =
+  match operation with
+  | Patch.Create path -> "Creation of `" ^ path ^ "`"
+  | Patch.Rename (old_path, new_path) ->
+      "Rename from `" ^ old_path ^ "` to `" ^ new_path ^ "`"
+  | Patch.Delete path -> "Deletion of `" ^ path ^ "`"
+  | Patch.Edit path -> "Modification of `" ^ path ^ "`"
+  | Patch.Rename_only (old_path, new_path) ->
+    "Rename only from `" ^ old_path ^ "` to `" ^ new_path ^ "`"
+
 let string_of_hunk = Format.asprintf "%a" Patch.pp_hunk
 
 let current_operation patches =

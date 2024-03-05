@@ -89,3 +89,4 @@ let () =
   let () = assert (test_next_zipper next_zipper) in
   let () = assert (test_prev_zipper prev_zipper) in
   Printf.printf "All tests passed!\n"
+

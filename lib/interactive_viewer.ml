@@ -11,20 +11,42 @@ let current_patch patches =
 
 let string_of_operation operation =
   match operation with
-  | Patch.Create path -> "Creation of `" ^ path ^ "`"
+  | Patch.Create path ->
+    Ui.hcat [
+          W.string "Creation of ";
+          W.string ~attr:Notty.A.(fg green ++ st bold) ("" ^ path ^ "")
+    ]
+  | Patch.Delete path ->
+    Ui.hcat [
+      W.string "Deletion of ";
+      W.string ~attr:Notty.A.(fg red ++ st bold) ("" ^ path ^ "")
+    ]
   | Patch.Rename (old_path, new_path) ->
-      "Rename from `" ^ old_path ^ "` to `" ^ new_path ^ "`"
-  | Patch.Delete path -> "Deletion of `" ^ path ^ "`"
-  | Patch.Edit path -> "Modification of `" ^ path ^ "`"
+    Ui.hcat [
+      W.string "Rename with modifications ";
+      W.string ~attr:Notty.A.(fg blue ++ st bold) ("" ^ old_path ^ "");
+      W.string " to ";
+      W.string ~attr:Notty.A.(fg green ++ st bold) ("" ^ new_path ^ "");
+    ]
   | Patch.Rename_only (old_path, new_path) ->
-    "Rename only from `" ^ old_path ^ "` to `" ^ new_path ^ "`"
+    Ui.hcat [
+      W.string "Rename ";
+      W.string ~attr:Notty.A.(fg blue ++ st bold) ("" ^ old_path ^ "");
+      W.string " to ";
+      W.string ~attr:Notty.A.(fg green ++ st bold) ("" ^ new_path ^ "");
+    ]
+  | Patch.Edit path ->
+    Ui.hcat [
+      W.string "Modification of ";
+      W.string ~attr:Notty.A.(fg red ++ st bold) ("" ^ path ^ "")
+    ]
 
 let string_of_hunk = Format.asprintf "%a" Patch.pp_hunk
 
 let current_operation patches =
   let$ current_patch = current_patch patches in
   match current_patch with
-  | Some p -> W.string @@ string_of_operation p.Patch.operation
+  | Some p -> string_of_operation p.Patch.operation
   | None -> W.string "No operation"
 
 let current_hunks patches =

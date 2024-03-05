@@ -27,7 +27,7 @@ Encountering challenges is a normal part of the process. If you need help:
 ## Contributing Guidelines
 
 - **Commit Messages:** Use concise and descriptive commit messages. This helps with the project's history and review process.
-- **Pull Requests:** Before submitting a pull request, make sure your code complies with the project's standards and passes all tests by running `dune build @fmt` and `dune runtest`.
+- **Pull Requests:** Before submitting a pull request, make sure your code complies with the project's standards and passes all tests by running `dune fmt` and `dune runtest`. Note you will need `ocamlformat=0.26.1`.
 
 ## Contributing and AI
 

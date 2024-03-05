@@ -1,0 +1,4 @@
+(tests
+ (names test_zipper) 
+ (libraries diffcessible notty nottui lwd patch))
+

@@ -9,8 +9,6 @@ let current_patch patches =
   let$ index = index in
   List.nth_opt patches index
 
-(* let string_of_operation = Format.asprintf "%a" (Patch.pp_operation ~git:false) *)
-
 let string_of_operation operation =
   match operation with
   | Patch.Create path -> "Creation of `" ^ path ^ "`"

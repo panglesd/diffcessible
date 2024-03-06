@@ -46,19 +46,6 @@ let current_operation z_patches : ui Lwd.t =
   let p = Zipper.get_focus z in
   ui_of_operation p.Patch.operation
 
-let compute_additions_removals (hunk : Patch.hunk) : int * int =
-  let add_count, remove_count =
-    List.fold_left
-      (fun (adds, rems) line ->
-        match line with
-        | `Mine _ -> (adds, rems + 1) (* `Mine line represents a removal *)
-        | `Their _ -> (adds + 1, rems) (* `Their line represents an addition *)
-        | `Common _ -> (adds, rems)
-        (* `Common lines do not count towards additions or removals *))
-      (0, 0) hunk.lines
-  in
-  (add_count, remove_count)
-
 let current_hunks z_patches : ui Lwd.t =
   let$ z = Lwd.get z_patches in
   let p = Zipper.get_focus z in
@@ -67,45 +54,7 @@ let current_hunks z_patches : ui Lwd.t =
       (fun h -> W.string ~attr:Notty.A.(fg lightblue) (string_of_hunk h))
       p.Patch.hunks
   in
-
-  (* compute additions and removals *)
-  let add_count, remove_count =
-    List.fold_left
-      (fun (adds, rems) hunk ->
-        let a, r = compute_additions_removals hunk in
-        (adds + a, rems + r))
-      (0, 0) p.Patch.hunks
-  in
-
-  (* helper function to conditionally append elements based on count *)
-  let append_if_positive count make_string acc =
-    match count with 0 -> acc | _ -> acc @ [ make_string count ]
-  in
-
-  let summary_strings = [] in
-  let summary_strings =
-    append_if_positive
-      (List.length p.Patch.hunks)
-      (fun c ->
-        W.string ~attr:Notty.A.(fg yellow) (Printf.sprintf "Total hunks: %d" c))
-      summary_strings
-  in
-  let summary_strings =
-    append_if_positive add_count
-      (fun c ->
-        W.string
-          ~attr:Notty.A.(fg green)
-          (Printf.sprintf "Total additions: %d" c))
-      summary_strings
-  in
-  let summary_strings =
-    append_if_positive remove_count
-      (fun c ->
-        W.string ~attr:Notty.A.(fg red) (Printf.sprintf "Total removals: %d" c))
-      summary_strings
-  in
-  let combined = hunks @ summary_strings in
-  Ui.vcat combined
+  Ui.vcat @@ hunks
 
 type direction = Prev | Next
 

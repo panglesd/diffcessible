@@ -6,9 +6,7 @@ type 'a t = {
   current_index : int;
 }
 
-exception Empty_list
-
-val zipper_of_list : 'a list -> 'a t
+val zipper_of_list : 'a list -> 'a t option
 val next : 'a t -> 'a t
 val prev : 'a t -> 'a t
 val get_focus : 'a t -> 'a

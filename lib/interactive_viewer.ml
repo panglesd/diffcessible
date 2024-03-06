@@ -1,9 +1,6 @@
 open Nottui
 module W = Nottui_widgets
 open Lwd_infix
-open Zipper
-
-let zipper_of_list (lst : 'a list) : 'a t Lwd.var = Lwd.var (zipper_of_list lst)
 
 let string_of_operation (op : Patch.operation) : string =
   match op with
@@ -25,17 +22,17 @@ let attr_of_operation (op : Patch.operation) : Notty.A.t =
 let string_of_hunk (hunk : Patch.hunk) : string =
   Format.asprintf "%a" Patch.pp_hunk hunk
 
-let operation_info (z_patches : Patch.t t Lwd.var) : ui Lwd.t =
+let operation_info z_patches : ui Lwd.t =
   let$ z = Lwd.get z_patches in
   W.string
     ~attr:Notty.A.(fg lightcyan)
     (Printf.sprintf "Operation %d of %d"
-       (get_current_index z + 1)
-       (get_total_length z))
+       (Zipper.get_current_index z + 1)
+       (Zipper.get_total_length z))
 
-let current_operation (z_patches : Patch.t t Lwd.var) : ui Lwd.t =
+let current_operation z_patches : ui Lwd.t =
   let$ z = Lwd.get z_patches in
-  let p = get_focus z in
+  let p = Zipper.get_focus z in
   let attr = attr_of_operation p.Patch.operation in
   W.string ~attr (string_of_operation p.Patch.operation)
 
@@ -52,9 +49,9 @@ let compute_additions_removals (hunk : Patch.hunk) : int * int =
   in
   (add_count, remove_count)
 
-let current_hunks (z_patches : Patch.t t Lwd.var) : ui Lwd.t =
+let current_hunks z_patches : ui Lwd.t =
   let$ z = Lwd.get z_patches in
-  let p = get_focus z in
+  let p = Zipper.get_focus z in
   let hunks =
     List.map
       (fun h -> W.string ~attr:Notty.A.(fg lightblue) (string_of_hunk h))
@@ -102,17 +99,21 @@ let current_hunks (z_patches : Patch.t t Lwd.var) : ui Lwd.t =
 
 type direction = Prev | Next
 
-let navigate (z_patches : Patch.t t Lwd.var) (dir : direction) : unit =
+let navigate z_patches (dir : direction) : unit =
   let z = Lwd.peek z_patches in
   match dir with
-  | Prev -> Lwd.set z_patches (prev z)
-  | Next -> Lwd.set z_patches (next z)
+  | Prev -> Lwd.set z_patches (Zipper.prev z)
+  | Next -> Lwd.set z_patches (Zipper.next z)
 
 (* let pure_str s = Lwd.pure (W.string s) *)
 let quit = Lwd.var false
 
 let view (patches : Patch.t list) =
-  let z_patches = zipper_of_list patches in
+  let z_patches : 'a Zipper.t Lwd.var =
+    match Zipper.zipper_of_list patches with
+    | Some z -> Lwd.var z
+    | None -> failwith "zipper_of_list: empty list"
+  in
   W.vbox
     [
       operation_info z_patches;

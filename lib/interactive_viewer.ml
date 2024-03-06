@@ -49,11 +49,7 @@ let current_operation z_patches : ui Lwd.t =
 let current_hunks z_patches : ui Lwd.t =
   let$ z = Lwd.get z_patches in
   let p = Zipper.get_focus z in
-  let hunks =
-    List.map
-      (fun h -> W.string ~attr:Notty.A.(fg lightblue) (string_of_hunk h))
-      p.Patch.hunks
-  in
+  let hunks = List.map (fun h -> W.string (string_of_hunk h)) p.Patch.hunks in
   Ui.vcat @@ hunks
 
 type direction = Prev | Next

@@ -1,3 +1,10 @@
+(** The type of a zipper for elements of type ['a]. It consists of three parts:
+    - [before]: The list of elements before the current focus.
+    - [focus]: The current focused element of the zipper.
+    - [after]: The list of elements after the focus.
+    - [total_length]: The total length of the list represented by the zipper.
+    - [current_index]: The current index (0-based) of the focus in the list. *)
+
 type 'a t = {
   before : 'a list;
   focus : 'a;
@@ -5,12 +12,6 @@ type 'a t = {
   total_length : int;
   current_index : int; (* 0-based index *)
 }
-(** The type of a zipper for elements of type ['a]. It consists of three parts:
-    - [before]: The list of elements before the current focus.
-    - [focus]: The current focused element of the zipper.
-    - [after]: The list of elements after the focus.
-    - [total_length]: The total length of the list represented by the zipper.
-    - [current_index]: The current index (0-based) of the focus in the list. *)
 
 (** [zipper_of_list lst] converts a list into a zipper. If the list is empty, it returns [None].
         Otherwise, it returns [Some zipper] with the first element of the list as the focus. *)

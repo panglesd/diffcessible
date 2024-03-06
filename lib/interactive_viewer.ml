@@ -9,36 +9,40 @@ let current_patch patches =
   let$ index = index in
   List.nth_opt patches index
 
+let greenBoldAttr = Notty.A.(fg green ++ st bold)
+let redBoldAttr = Notty.A.(fg red ++ st bold)
+let blueBoldAttr = Notty.A.(fg blue ++ st bold)
+
 let string_of_operation operation =
   match operation with
   | Patch.Create path ->
     Ui.hcat [
           W.string "Creation of ";
-          W.string ~attr:Notty.A.(fg green ++ st bold) ("" ^ path ^ "")
+          W.string ~attr:greenBoldAttr ("" ^ path ^ "")
     ]
   | Patch.Delete path ->
     Ui.hcat [
       W.string "Deletion of ";
-      W.string ~attr:Notty.A.(fg red ++ st bold) ("" ^ path ^ "")
+      W.string ~attr:redBoldAttr ("" ^ path ^ "")
     ]
   | Patch.Rename (old_path, new_path) ->
     Ui.hcat [
       W.string "Rename with modifications ";
-      W.string ~attr:Notty.A.(fg blue ++ st bold) ("" ^ old_path ^ "");
+      W.string ~attr:blueBoldAttr ("" ^ old_path ^ "");
       W.string " to ";
-      W.string ~attr:Notty.A.(fg green ++ st bold) ("" ^ new_path ^ "");
+      W.string ~attr:greenBoldAttr ("" ^ new_path ^ "");
     ]
   | Patch.Rename_only (old_path, new_path) ->
     Ui.hcat [
       W.string "Rename ";
-      W.string ~attr:Notty.A.(fg blue ++ st bold) ("" ^ old_path ^ "");
+      W.string ~attr:blueBoldAttr("" ^ old_path ^ "");
       W.string " to ";
-      W.string ~attr:Notty.A.(fg green ++ st bold) ("" ^ new_path ^ "");
+      W.string ~attr:greenBoldAttr ("" ^ new_path ^ "");
     ]
   | Patch.Edit path ->
     Ui.hcat [
       W.string "Modification of ";
-      W.string ~attr:Notty.A.(fg red ++ st bold) ("" ^ path ^ "")
+      W.string ~attr:blueBoldAttr ("" ^ path ^ "")
     ]
 
 let string_of_hunk = Format.asprintf "%a" Patch.pp_hunk

@@ -1766,3 +1766,78 @@ index 0000000..3b7560e
 +
 +let () =
 +  Alcotest.run "Patch tests" tests
+
+ diff --git a/dir1/file.txt b/dir2/file.txt
+index dfd0d1e..ce59064 100644
+--- a/dir1/file.txt
++++ b/dir2/file.txt
+@@ -1 +1 @@
+-This is the original content.
++This is the modified content.
+diff --git a/dir2/new_diff.diff b/dir2/new_diff.diff
+new file mode 100644
+index 0000000..e69de29
+
+diff --git a/dir1/file.txt b/dir2/file.txt
+index dfd0d1e..50e0cc9 100644
+--- a/dir1/file.txt
++++ b/dir2/file.txt
+@@ -1 +1,2 @@
+ This is the original content.
++Here is some additional line.
+diff --git a/dir2/new_diff.diff b/dir2/new_diff.diff
+new file mode 100644
+index 0000000..e69de29
+
+diff --git a/dir1/file.txt b/dir2/file.txt
+index dfd0d1e..cf5dea7 100644
+--- a/dir1/file.txt
++++ b/dir2/file.txt
+@@ -1 +1,2 @@
+-This is the original content.
++Here is some additional line.
++Deleted line 1 and added this.
+
+diff --git a/dir2/file.txt b/dir2/file.txt
+new file mode 100644
+index 0000000..01a59b0
+--- /dev/null
++++ b/dir2/file.txt
+@@ -0,0 +1 @@
++lorem ipsum
+
+diff --git a/dir1/file.txt b/dir1/file.txt
+deleted file mode 100644
+index 7b57bd2..0000000
+--- a/dir1/file.txt
++++ /dev/null
+@@ -1 +0,0 @@
+-some text
+
+diff --git a/dir1/file.txt b/dir2/new_file.txt
+similarity index 100%
+rename from dir1/file.txt
+rename to dir2/new_file.txt
+
+diff --git a/dir1/file.txt b/dir1/file.txt
+deleted file mode 100644
+index 7b57bd2..0000000
+--- a/dir1/file.txt
++++ /dev/null
+@@ -1 +0,0 @@
+-some text
+diff --git a/dir2/sample.txt b/dir2/sample.txt
+new file mode 100644
+index 0000000..9809dd1
+--- /dev/null
++++ b/dir2/sample.txt
+@@ -0,0 +1,2 @@
++some text
++lorem ipsum
+
+diff --git a/dir1/file.txt b/dir2/file.txt
+index e69de29..eee417f 100644
+--- a/dir1/file.txt
++++ b/dir2/file.txt
+@@ -0,0 +1 @@
++new text

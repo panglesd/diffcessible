@@ -2,15 +2,6 @@ open Nottui
 module W = Nottui_widgets
 open Lwd_infix
 
-let string_of_operation (op : Patch.operation) : string =
-  match op with
-  | Edit e -> Printf.sprintf "Edited:\n%s" e
-  | Rename (n1, n2) ->
-      Printf.sprintf "Renamed with modifications:\n %s\nto\n%s" n1 n2
-  | Delete d -> Printf.sprintf "Deleted:\n%s" d
-  | Create c -> Printf.sprintf "Created:\n%s" c
-  | Rename_only (n1, n2) -> Printf.sprintf "Renamed:\n%s\nto\n%s" n1 n2
-  
 let operation_info z_patches : ui Lwd.t =
   let$ z = Lwd.get z_patches in
   W.string
@@ -25,34 +16,28 @@ let ui_of_operation operation =
   let blue_bold_attr = Notty.A.(fg blue ++ st bold) in
   match operation with
   | Patch.Create path ->
-    Ui.hcat [
-          W.string "Creation of ";
-          W.string ~attr:green_bold_attr path; 
-    ]
+      Ui.hcat [ W.string "Creation of "; W.string ~attr:green_bold_attr path ]
   | Patch.Delete path ->
-    Ui.hcat [
-      W.string "Deletion of ";
-      W.string ~attr:red_bold_attr path;
-    ]
+      Ui.hcat [ W.string "Deletion of "; W.string ~attr:red_bold_attr path ]
   | Patch.Rename (old_path, new_path) ->
-    Ui.hcat [
-      W.string "Rename with modifications ";
-      W.string ~attr:blue_bold_attr old_path;
-      W.string " to ";
-      W.string ~attr:green_bold_attr new_path;
-    ]
+      Ui.hcat
+        [
+          W.string "Rename with modifications ";
+          W.string ~attr:blue_bold_attr old_path;
+          W.string " to ";
+          W.string ~attr:green_bold_attr new_path;
+        ]
   | Patch.Rename_only (old_path, new_path) ->
-    Ui.hcat [
-      W.string "Rename ";
-      W.string ~attr:blue_bold_attr old_path;
-      W.string " to ";
-      W.string ~attr:green_bold_attr new_path;
-    ]
+      Ui.hcat
+        [
+          W.string "Rename ";
+          W.string ~attr:blue_bold_attr old_path;
+          W.string " to ";
+          W.string ~attr:green_bold_attr new_path;
+        ]
   | Patch.Edit path ->
-    Ui.hcat [
-      W.string "Modification of ";
-      W.string ~attr:blue_bold_attr path;
-    ]
+      Ui.hcat
+        [ W.string "Modification of "; W.string ~attr:blue_bold_attr path ]
 
 let string_of_hunk = Format.asprintf "%a" Patch.pp_hunk
 

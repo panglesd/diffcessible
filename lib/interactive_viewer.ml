@@ -9,40 +9,39 @@ let current_patch patches =
   let$ index = index in
   List.nth_opt patches index
 
-let greenBoldAttr = Notty.A.(fg green ++ st bold)
-let redBoldAttr = Notty.A.(fg red ++ st bold)
-let blueBoldAttr = Notty.A.(fg blue ++ st bold)
-
-let string_of_operation operation =
+let ui_of_operation operation =
+  let green_bold_attr = Notty.A.(fg green ++ st bold) in
+  let red_bold_attr = Notty.A.(fg red ++ st bold) in
+  let blue_bold_attr = Notty.A.(fg blue ++ st bold) in
   match operation with
   | Patch.Create path ->
     Ui.hcat [
           W.string "Creation of ";
-          W.string ~attr:greenBoldAttr ("" ^ path ^ "")
+          W.string ~attr:green_bold_attr path; 
     ]
   | Patch.Delete path ->
     Ui.hcat [
       W.string "Deletion of ";
-      W.string ~attr:redBoldAttr ("" ^ path ^ "")
+      W.string ~attr:red_bold_attr path;
     ]
   | Patch.Rename (old_path, new_path) ->
     Ui.hcat [
       W.string "Rename with modifications ";
-      W.string ~attr:blueBoldAttr ("" ^ old_path ^ "");
+      W.string ~attr:blue_bold_attr old_path;
       W.string " to ";
-      W.string ~attr:greenBoldAttr ("" ^ new_path ^ "");
+      W.string ~attr:green_bold_attr new_path;
     ]
   | Patch.Rename_only (old_path, new_path) ->
     Ui.hcat [
       W.string "Rename ";
-      W.string ~attr:blueBoldAttr("" ^ old_path ^ "");
+      W.string ~attr:blue_bold_attr old_path;
       W.string " to ";
-      W.string ~attr:greenBoldAttr ("" ^ new_path ^ "");
+      W.string ~attr:green_bold_attr new_path;
     ]
   | Patch.Edit path ->
     Ui.hcat [
       W.string "Modification of ";
-      W.string ~attr:blueBoldAttr ("" ^ path ^ "")
+      W.string ~attr:blue_bold_attr path;
     ]
 
 let string_of_hunk = Format.asprintf "%a" Patch.pp_hunk
@@ -50,7 +49,7 @@ let string_of_hunk = Format.asprintf "%a" Patch.pp_hunk
 let current_operation patches =
   let$ current_patch = current_patch patches in
   match current_patch with
-  | Some p -> string_of_operation p.Patch.operation
+  | Some p -> ui_of_operation p.Patch.operation
   | None -> W.string "No operation"
 
 let current_hunks patches =

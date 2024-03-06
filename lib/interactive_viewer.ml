@@ -10,18 +10,7 @@ let string_of_operation (op : Patch.operation) : string =
   | Delete d -> Printf.sprintf "Deleted:\n%s" d
   | Create c -> Printf.sprintf "Created:\n%s" c
   | Rename_only (n1, n2) -> Printf.sprintf "Renamed:\n%s\nto\n%s" n1 n2
-
-let attr_of_operation (op : Patch.operation) : Notty.A.t =
-  match op with
-  | Edit _ -> Notty.A.(fg lightblue)
-  | Rename _ -> Notty.A.(fg lightgreen)
-  | Delete _ -> Notty.A.(fg lightred)
-  | Create _ -> Notty.A.(fg lightyellow)
-  | Rename_only _ -> Notty.A.(fg lightmagenta)
-
-let string_of_hunk (hunk : Patch.hunk) : string =
-  Format.asprintf "%a" Patch.pp_hunk hunk
-
+  
 let operation_info z_patches : ui Lwd.t =
   let$ z = Lwd.get z_patches in
   W.string
@@ -30,11 +19,47 @@ let operation_info z_patches : ui Lwd.t =
        (Zipper.get_current_index z + 1)
        (Zipper.get_total_length z))
 
+let ui_of_operation operation =
+  let green_bold_attr = Notty.A.(fg green ++ st bold) in
+  let red_bold_attr = Notty.A.(fg red ++ st bold) in
+  let blue_bold_attr = Notty.A.(fg blue ++ st bold) in
+  match operation with
+  | Patch.Create path ->
+    Ui.hcat [
+          W.string "Creation of ";
+          W.string ~attr:green_bold_attr path; 
+    ]
+  | Patch.Delete path ->
+    Ui.hcat [
+      W.string "Deletion of ";
+      W.string ~attr:red_bold_attr path;
+    ]
+  | Patch.Rename (old_path, new_path) ->
+    Ui.hcat [
+      W.string "Rename with modifications ";
+      W.string ~attr:blue_bold_attr old_path;
+      W.string " to ";
+      W.string ~attr:green_bold_attr new_path;
+    ]
+  | Patch.Rename_only (old_path, new_path) ->
+    Ui.hcat [
+      W.string "Rename ";
+      W.string ~attr:blue_bold_attr old_path;
+      W.string " to ";
+      W.string ~attr:green_bold_attr new_path;
+    ]
+  | Patch.Edit path ->
+    Ui.hcat [
+      W.string "Modification of ";
+      W.string ~attr:blue_bold_attr path;
+    ]
+
+let string_of_hunk = Format.asprintf "%a" Patch.pp_hunk
+
 let current_operation z_patches : ui Lwd.t =
   let$ z = Lwd.get z_patches in
   let p = Zipper.get_focus z in
-  let attr = attr_of_operation p.Patch.operation in
-  W.string ~attr (string_of_operation p.Patch.operation)
+  ui_of_operation p.Patch.operation
 
 let compute_additions_removals (hunk : Patch.hunk) : int * int =
   let add_count, remove_count =

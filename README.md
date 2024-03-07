@@ -26,6 +26,8 @@ This project runs using the output of a git diff command. Such as:
 git diff > git.diff
 ```
 
+For testing there is an included file `example.diff` that already contains a diff output.
+
 To run the project, you can use the following command:
 
 ```bash

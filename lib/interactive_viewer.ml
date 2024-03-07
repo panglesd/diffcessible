@@ -62,6 +62,31 @@ let navigate z_patches (dir : direction) : unit =
 
 let quit = Lwd.var false
 
+let calculate_add_remove lines =
+  List.fold_left
+    (fun (add, rem) line ->
+      match line with
+      | `Their _ -> (add + 1, rem)
+      | `Mine _ -> (add, rem + 1)
+      | _ -> (add, rem))
+    (0, 0) lines
+
+let modification_counter z_patches : ui Lwd.t =
+  let$ z = Lwd.get z_patches in
+  let p = Zipper.get_focus z in
+  let hunks = p.Patch.hunks in
+  let additions, removals =
+    List.fold_left
+      (fun (add_acc, remove_acc) hunk ->
+        let addition, removal = calculate_add_remove hunk.Patch.lines in
+        (add_acc + addition, remove_acc + removal))
+      (0, 0) hunks
+  in
+  let operation_count =
+    Printf.sprintf "%d additions, %d removals" additions removals
+  in
+  W.string ~attr:Notty.A.(fg lightcyan) @@ Printf.sprintf "%s\n" operation_count
+
 let view (patches : Patch.t list) =
   let z_patches : 'a Zipper.t Lwd.var =
     match Zipper.zipper_of_list patches with
@@ -71,6 +96,7 @@ let view (patches : Patch.t list) =
   W.vbox
     [
       operation_info z_patches;
+      modification_counter z_patches;
       current_operation z_patches;
       W.scrollbox @@ current_hunks z_patches;
       Lwd.pure

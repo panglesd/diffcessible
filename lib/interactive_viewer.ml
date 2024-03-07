@@ -141,7 +141,6 @@ let view (patches : Patch.t list) =
         | Regular -> current_hunks z_patches
         | SideBySide -> current_hunks_side_by_side z_patches)
   in
-
   W.vbox
     [
       operation_info z_patches;

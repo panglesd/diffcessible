@@ -21,10 +21,15 @@ opam install . --deps-only --with-test
 
 ## Running the Project
 
-To run the project, you can use the following commands:
+This project runs using the output of a git diff command. Such as:
+```bash
+git diff > git.diff
+```
+
+To run the project, you can use the following command:
 
 ```bash
-dune exec diffcessible [path/to/file1]
+dune exec diffcessible [path/to/git.diff]
 ```
 
 ## Technologies Used

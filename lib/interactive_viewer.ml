@@ -60,7 +60,6 @@ let navigate z_patches (dir : direction) : unit =
   | Prev -> Lwd.set z_patches (Zipper.prev z)
   | Next -> Lwd.set z_patches (Zipper.next z)
 
-(* let pure_str s = Lwd.pure (W.string s) *)
 let quit = Lwd.var false
 
 let view (patches : Patch.t list) =

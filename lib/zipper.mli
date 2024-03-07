@@ -1,13 +1,5 @@
-type 'a t = {
-  before : 'a list;  (** The list of elements before the current focus. *)
-  focus : 'a;  (** The current focused element of the zipper. *)
-  after : 'a list;  (** The list of elements after the focus. *)
-  total_length : int;
-      (** The total length of the list represented by the zipper. *)
-  current_index : int;
-      (** The current index (0-based) of the focus in the list. *)
-}
-(** The type of a zipper for elements of type ['a]. It encapsulates the state of a traversal through a list, allowing for efficient forward and backward movement. *)
+type 'a t
+(** Abstract type for a zipper for elements of type ['a] that allows for efficient traversal of a list. *)
 
 val zipper_of_list : 'a list -> 'a t option
 (** [zipper_of_list lst] converts a list into a zipper. If the list is empty, it returns [None].
@@ -34,4 +26,5 @@ val get_total_length : 'a t -> int
 (** [get_total_length z] returns the total length of the list represented by the zipper [z]. *)
 
 val get_current_index : 'a t -> int
-(** [get_current_index z] returns the current index of the focus in the zipper [z]. *)
+(** [get_current_index z] returns the current index (0-based) of the focus in the list. *)
+

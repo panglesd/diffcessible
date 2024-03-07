@@ -62,28 +62,33 @@ let navigate z_patches (dir : direction) : unit =
 
 let quit = Lwd.var false
 
-let calculate_add_remove lines =
-  List.fold_left
-    (fun (add, rem) line ->
-      match line with
-      | `Their _ -> (add + 1, rem)
-      | `Mine _ -> (add, rem + 1)
-      | _ -> (add, rem))
-    (0, 0) lines
-
-let modification_counter z_patches : ui Lwd.t =
+let calculate_add_remove_operation z_patches : ui Lwd.t =
   let$ z = Lwd.get z_patches in
   let p = Zipper.get_focus z in
-  let hunks = p.Patch.hunks in
   let additions, removals =
     List.fold_left
       (fun (add_acc, remove_acc) hunk ->
-        let addition, removal = calculate_add_remove hunk.Patch.lines in
+        let calculate_add_remove_hunk lines =
+          List.fold_left
+            (fun (addition, removal) line ->
+              match line with
+              | `Their _ -> (addition + 1, removal)
+              | `Mine _ -> (addition, removal + 1)
+              | `Common _ -> (addition, removal))
+            (0, 0) lines
+        in
+        let addition, removal = calculate_add_remove_hunk hunk.Patch.lines in
         (add_acc + addition, remove_acc + removal))
-      (0, 0) hunks
+      (0, 0) p.Patch.hunks
+  in
+  let count_with_plural n singular plural =
+    if n = 1 then Printf.sprintf "%d %s" n singular
+    else Printf.sprintf "%d %s" n plural
   in
   let operation_count =
-    Printf.sprintf "%d additions, %d removals" additions removals
+    Printf.sprintf "%s, %s"
+      (count_with_plural additions "addition" "additions")
+      (count_with_plural removals "removal" "removals")
   in
   W.string ~attr:Notty.A.(fg lightcyan) @@ Printf.sprintf "%s\n" operation_count
 
@@ -96,7 +101,7 @@ let view (patches : Patch.t list) =
   W.vbox
     [
       operation_info z_patches;
-      modification_counter z_patches;
+      calculate_add_remove_operation z_patches;
       current_operation z_patches;
       W.scrollbox @@ current_hunks z_patches;
       Lwd.pure

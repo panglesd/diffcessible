@@ -7,9 +7,8 @@ let operation_info z_patches : ui Lwd.t =
   let p = Zipper.get_focus z in
   let num_hunks = List.length p.Patch.hunks in
   let hunk_text = match num_hunks with
-    | 1 -> "1 hunk"
-    | n when n > 1 -> Printf.sprintf "%d hunks" n
-    | _ -> "0 hunks"
+    | n when n > 1 || n = 0 -> Printf.sprintf "%d hunks" n
+    | _ -> "1 hunk"
 in
   W.string
     ~attr:Notty.A.(fg lightcyan)

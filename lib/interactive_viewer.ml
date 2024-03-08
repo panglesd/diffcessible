@@ -4,11 +4,14 @@ open Lwd_infix
 
 let operation_info z_patches : ui Lwd.t =
   let$ z = Lwd.get z_patches in
+  let p = Zipper.get_focus z in
+  let num_hunks = List.length p.Patch.hunks in
   W.string
     ~attr:Notty.A.(fg lightcyan)
-    (Printf.sprintf "Operation %d of %d"
+    (Printf.sprintf "Operation %d of %d, Hunks: %d "
        (Zipper.get_current_index z + 1)
-       (Zipper.get_total_length z))
+       (Zipper.get_total_length z)
+       num_hunks)
 
 let ui_of_operation operation =
   let green_bold_attr = Notty.A.(fg green ++ st bold) in

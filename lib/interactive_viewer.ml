@@ -69,6 +69,31 @@ let view (patches : Patch.t list) =
     | Some z -> Lwd.var z
     | None -> failwith "zipper_of_list: empty list"
   in
+  let help_panel = Ui.vcat
+  [
+     W.string "h:  This key can be used to toggle the help panel";
+     W.string "q:  This key can be used to quit the diffcessible viewer";
+     W.string "n:  This key can be used to move to the next operation, if present";
+     W.string "p:  This key can be used to move to the previous operation, if present" ;
+  ] in
+  let help = Lwd.var false  in
+  let help_visible=Lwd.get help in
+  if Lwd.peek help_visible then W.vbox[
+  Lwd.pure @@ help_panel;
+  Lwd.pure
+      @@ Ui.keyboard_area
+           (function
+             | `ASCII 'q', [] ->
+                 Lwd.set quit true;
+                 `Handled
+             | `ASCII 'h', [] ->
+                 Lwd.set help_visible false;             
+                 `Handled
+             | _ -> `Unhandled)
+            (W.string "Type 'q' to quit, 'h' to exit the help panel");
+
+   ]
+  else
   W.vbox
     [
       operation_info z_patches;
@@ -86,10 +111,13 @@ let view (patches : Patch.t list) =
              | `ASCII 'p', [] ->
                  navigate z_patches Prev;
                  `Handled
+             | `ASCII 'h', [] ->
+                 Lwd.set help_visible true;
+                 `Handled
              | _ -> `Unhandled)
            (W.string
               "Type 'q' to quit, 'n' to go to the next operation, 'p' to go to \
-               the previous operation");
+               the previous operation, 'h' to go to the help panel");
     ]
 
 let start patch = Ui_loop.run ~quit ~tick_period:0.2 (view patch)

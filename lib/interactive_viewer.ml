@@ -69,6 +69,7 @@ let navigate z_patches (dir : direction) : unit =
   | Next -> Lwd.set z_patches (Zipper.next z)
 
 let quit = Lwd.var false
+let help = Lwd.var false
 
 let additions_and_removals lines =
   let add_line (additions, removals) line =
@@ -104,43 +105,64 @@ let change_summary z_patches : ui Lwd.t =
   W.string ~attr:Notty.A.(fg lightcyan) operation_count
 
 let view (patches : Patch.t list) =
+  let help_panel =
+    Ui.vcat
+      [
+        W.string "Help Panel:\n";
+        W.string "h:   Toggle the help panel";
+        W.string "q:   Quit the diffcessible viewer";
+        W.string "n:   Move to the next operation, if present";
+        W.string "p:   Move to the previous operation, if present";
+      ]
+  in
   let z_patches : 'a Zipper.t Lwd.var =
     match Zipper.zipper_of_list patches with
     | Some z -> Lwd.var z
     | None -> failwith "zipper_of_list: empty list"
   in
-  let curr_scroll_state = Lwd.var W.default_scroll_state in
-  let change_scroll_state _action state =
-    let off_screen = state.W.position > state.W.bound in
-    if off_screen then
-      Lwd.set curr_scroll_state { state with position = state.W.bound }
-    else Lwd.set curr_scroll_state state
+  let ui =
+    let$* help_visible = Lwd.get help in
+    if help_visible then
+      W.vbox
+        [
+          W.scrollbox @@ Lwd.pure @@ help_panel;
+          Lwd.pure
+          @@ Ui.keyboard_area
+               (function
+                 | `ASCII 'q', [] ->
+                     Lwd.set help false;
+                     `Handled
+                 | _ -> `Unhandled)
+               (W.string "Type 'q' to exit the help panel");
+        ]
+    else
+      W.vbox
+        [
+          operation_info z_patches;
+          change_summary z_patches;
+          current_operation z_patches;
+          W.scrollbox @@ current_hunks z_patches;
+          Lwd.pure
+          @@ Ui.keyboard_area
+               (function
+                 | `ASCII 'q', [] ->
+                     Lwd.set quit true;
+                     `Handled
+                 | `ASCII 'n', [] ->
+                     navigate z_patches Next;
+                     `Handled
+                 | `ASCII 'p', [] ->
+                     navigate z_patches Prev;
+                     `Handled
+                 | `ASCII 'h', [] ->
+                     Lwd.set help true;
+                     `Handled
+                 | _ -> `Unhandled)
+               (W.string
+                  "Type 'q' to quit, 'n' to go to the next operation, 'p' to \
+                   go to the previous operation, 'h' to go to the help panel");
+        ]
   in
-  W.vbox
-    [
-      operation_info z_patches;
-      change_summary z_patches;
-      current_operation z_patches;
-      W.vscroll_area
-        ~state:(Lwd.get curr_scroll_state)
-        ~change:change_scroll_state
-      @@ current_hunks z_patches;
-      Lwd.pure
-      @@ Ui.keyboard_area
-           (function
-             | `ASCII 'q', [] ->
-                 Lwd.set quit true;
-                 `Handled
-             | `ASCII 'n', [] ->
-                 navigate z_patches Next;
-                 `Handled
-             | `ASCII 'p', [] ->
-                 navigate z_patches Prev;
-                 `Handled
-             | _ -> `Unhandled)
-           (W.string
-              "Type 'q' to quit, 'n' to go to the next operation, 'p' to go to \
-               the previous operation");
-    ]
+  W.vbox [ ui ]
 
 let start patch = Ui_loop.run ~quit ~tick_period:0.2 (view patch)

@@ -27,8 +27,15 @@ let current_hunks patches =
 
 (* let pure_str s = Lwd.pure (W.string s) *)
 let quit = Lwd.var false
+let help = Lwd.var false
 
+<<<<<<< HEAD
 let view (patches : Patch.t list) =
+  let z_patches : 'a Zipper.t Lwd.var =
+    match Zipper.zipper_of_list patches with
+    | Some z -> Lwd.var z
+    | None -> failwith "zipper_of_list: empty list"
+  in
   let help_panel = Ui.vcat
   [
      W.string "h:  This key can be used to toggle the help panel";
@@ -68,16 +75,18 @@ let view (patches : Patch.t list) =
                  Lwd.set index_v (Lwd.peek index_v + 1);
                  `Handled
              | `ASCII 'p', [] ->
-                 Lwd.set index_v (Lwd.peek index_v - 1);
+                 navigate z_patches Prev;
                  `Handled
              | `ASCII 'h', [] ->
                  Lwd.set help_visible true;
                  `Handled
              | `ASCII 'h', [] ->
-                 Lwd.set help_visible true;
+                 Lwd.set help true;
                  `Handled
              | _ -> `Unhandled)
-           (W.string "Type 'q' to quit., 'h' to go to the help panel");
+           (W.string
+              "Type 'q' to quit, 'n' to go to the next operation, 'p' to go to \
+               the previous operation, 'h' to go to the help panel");
     ]
 
 let start patch = Ui_loop.run ~quit ~tick_period:0.2 (view patch)

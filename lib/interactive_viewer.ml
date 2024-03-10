@@ -69,11 +69,29 @@ let view (patches : Patch.t list) =
     | Some z -> Lwd.var z
     | None -> failwith "zipper_of_list: empty list"
   in
+  let curr_scroll_state = Lwd.var W.default_scroll_state in
+  let change_scroll_state action state =
+    let off_screen = action = `Action && state.W.position > state.W.bound in
+    let scroll_on_output =
+      action = `Action
+      &&
+      let state' = Lwd.peek curr_scroll_state in
+      state'.W.position = state'.W.bound
+      && state.W.position = state'.W.position
+      && state.W.position < state.W.bound
+    in
+    if scroll_on_output || off_screen then
+      Lwd.set curr_scroll_state { state with position = state.W.bound }
+    else Lwd.set curr_scroll_state state
+  in
   W.vbox
     [
       operation_info z_patches;
       current_operation z_patches;
-      W.scrollbox @@ current_hunks z_patches;
+      W.vscroll_area
+        ~state:(Lwd.get curr_scroll_state)
+        ~change:change_scroll_state
+      @@ current_hunks z_patches;
       Lwd.pure
       @@ Ui.keyboard_area
            (function

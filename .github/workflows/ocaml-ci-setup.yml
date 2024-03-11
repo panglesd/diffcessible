@@ -34,7 +34,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
       - name: Run tests
-      run: dune runtest
+        run: dune runtest
 
   check-formatting:
   runs-on: ubuntu-latest

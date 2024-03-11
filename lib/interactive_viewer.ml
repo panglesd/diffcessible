@@ -8,8 +8,8 @@ let operation_info z_patches : ui Lwd.t =
   let num_hunks = List.length p.Patch.hunks in
   let hunk_text =
     match num_hunks with
-    | n when n > 1 || n = 0 -> Printf.sprintf "%d hunks" n
-    | _ -> "1 hunk"
+    | 1 -> "1 hunk"
+    | _ -> Printf.sprintf "%d hunks" num_hunks
   in
   W.string
     ~attr:Notty.A.(fg lightcyan)

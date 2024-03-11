@@ -27,4 +27,3 @@ val get_total_length : 'a t -> int
 
 val get_current_index : 'a t -> int
 (** [get_current_index z] returns the current index (0-based) of the focus in the list. *)
-

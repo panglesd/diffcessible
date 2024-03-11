@@ -6,13 +6,14 @@ let operation_info z_patches : ui Lwd.t =
   let$ z = Lwd.get z_patches in
   let p = Zipper.get_focus z in
   let num_hunks = List.length p.Patch.hunks in
-  let hunk_text = match num_hunks with
+  let hunk_text =
+    match num_hunks with
     | n when n > 1 || n = 0 -> Printf.sprintf "%d hunks" n
     | _ -> "1 hunk"
-in
+  in
   W.string
     ~attr:Notty.A.(fg lightcyan)
-    (Printf.sprintf "Operation %d of %d, %s "
+    (Printf.sprintf "Operation %d of %d, %s"
        (Zipper.get_current_index z + 1)
        (Zipper.get_total_length z)
        hunk_text)

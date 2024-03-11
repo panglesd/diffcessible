@@ -62,27 +62,28 @@ let navigate z_patches (dir : direction) : unit =
 
 let quit = Lwd.var false
 
-let add_lines lines =
-  let add_line (addition, removal) line =
+let additions_and_removals lines =
+  let add_line (additions, removals) line =
     match line with
-    | `Their _ -> (addition + 1, removal)
-    | `Mine _ -> (addition, removal + 1)
-    | `Common _ -> (addition, removal)
+    | `Their _ -> (additions + 1, removals)
+    | `Mine _ -> (additions, removals + 1)
+    | `Common _ -> (additions, removals)
   in
   List.fold_left add_line (0, 0) lines
 
-let add_hunks hunks =
+let accumulate_count hunks =
   List.fold_left
-    (fun total_counts hunk ->
-      let additions, removals = add_lines hunk.Patch.lines in
-      (fun (add1, remove1) (add2, remove2) -> (add1 + add2, remove1 + remove2))
-        total_counts (additions, removals))
+    (fun (add_acc, remove_acc) hunk ->
+      let add_in_hunk, remove_in_hunk =
+        additions_and_removals hunk.Patch.lines
+      in
+      (add_acc + add_in_hunk, remove_acc + remove_in_hunk))
     (0, 0) hunks
 
 let change_summary z_patches : ui Lwd.t =
   let$ z = Lwd.get z_patches in
   let p = Zipper.get_focus z in
-  let total_additions, total_removals = add_hunks p.Patch.hunks in
+  let total_additions, total_removals = accumulate_count p.Patch.hunks in
   let format_plural n singular plural =
     if n = 1 then Printf.sprintf "%d %s" n singular
     else Printf.sprintf "%d %s" n plural

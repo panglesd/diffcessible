@@ -93,7 +93,7 @@ let change_summary z_patches : ui Lwd.t =
       (format_plural total_additions "addition" "additions")
       (format_plural total_removals "removal" "removals")
   in
-  W.string ~attr:Notty.A.(fg lightcyan) @@ Printf.sprintf "%s\n" operation_count
+  W.string ~attr:Notty.A.(fg lightcyan) operation_count
 
 let view (patches : Patch.t list) =
   let z_patches : 'a Zipper.t Lwd.var =

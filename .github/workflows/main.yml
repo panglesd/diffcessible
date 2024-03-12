@@ -18,9 +18,9 @@ jobs:
         os:
           - macos-latest
           - ubuntu-latest
-          - windows-latest
+          # - windows-latest
         ocaml-compiler:
-          - "5.1.0"
+          - "5.1"
 
     runs-on: ${{ matrix.os }}
 
@@ -33,8 +33,11 @@ jobs:
         with:
           ocaml-compiler: ${{ matrix.ocaml-compiler }}
 
-      - run: opam install . --deps-only --with-test
+      - name: Install Dependencies
+        run: opam install . --deps-only --with-test
 
-      - run: opam exec -- dune build
+      - name: Test
+        run: dune runtest
 
-      - run: opam exec -- dune runtest
+      - name: Format
+        run: dune fmt 

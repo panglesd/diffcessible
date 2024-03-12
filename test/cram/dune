@@ -1,0 +1,22 @@
+(executable
+  (name interactive_viewer_dummy)
+  (libraries diffcessible cmdliner notty nottui lwd patch)
+)
+
+; (env
+;   (dev)
+;   (name interactive_viewer_dummy)
+;   (modules main)
+; )
+(env
+ (_
+  (binaries
+   (./interactive_viewer_dummy.exe as my_executable))))
+
+; (cram
+;   (enabled)
+;   (files interactive_viewer_dummy.exe)
+; )
+
+(cram
+ (deps %{bin:my_executable}))

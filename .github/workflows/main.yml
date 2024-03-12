@@ -30,8 +30,8 @@ jobs:
 
       - name: Set-up OCaml ${{ matrix.ocaml-compiler }}
         uses: ocaml/setup-ocaml@v2
-        with:
-          ocaml-compiler: ${{ matrix.ocaml-compiler }}
+        # with:
+        #   ocaml-compiler: ${{ matrix.ocaml-compiler }}
 
       - run: opam install . --deps-only --with-test
 

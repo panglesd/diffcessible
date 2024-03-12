@@ -1,4 +1,4 @@
-name: Builds, tests & co
+name: CI
 
 on:
   push:
@@ -15,18 +15,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: macos-latest
-            ocaml-compiler: "5.1"
-          - os: ubuntu-latest
-            ocaml-compiler: "5.1"
-          - os: windows-latest
-            ocaml-compiler: "4.14.0"
+        os: 
+          - macos-latest
+          - ubuntu-latest
+        ocaml-compiler: 
+          - "5.1"
 
     runs-on: ${{ matrix.os }}
 
     steps:
-      - name: Checkout tree
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Set-up OCaml ${{ matrix.ocaml-compiler }}
@@ -38,7 +36,6 @@ jobs:
         run: |
            opam install ocamlformat.0.26.1
            opam install --deps-only -t -y .
-        # run: opam install ocamlformat.0.26.1 && opam install --deps-only -t -y .
 
       - name: Test
         run: opam exec -- dune runtest

@@ -27,26 +27,22 @@ Encountering challenges is a normal part of the process. If you need help:
 ## Contributing Guidelines
 
 - **Commit Messages:** Use concise and descriptive commit messages. This helps with the project's history and review process.
-- **Pull Requests:** Before submitting a pull request, make sure your code complies with the project's standards and passes all tests.. This process involves two key steps:
-  1. **Code Formatting:** Use `dune fmt` to automatically format your code according to the project's style guidelines. This command will apply the formatting rules defined in the `.ocamlformat` configuration file, ensuring consistency across the project.
-
-      To run this command, navigate to the root directory of your project in your terminal and execute:
+- **Pull Requests:** Before submitting a pull request, make sure your code complies with the project's standards and passes all tests. This process involves two key steps:
+  1. **Code Formatting:** To automatically format your code according to the project's style guidelines, run the following command:
        
             dune fmt
       
-      **Note:** You will need `ocamlformat=0.26.1` installed to format your code correctly. If you haven't installed it yet, you can do so by running:
+      **Note:** You will need `ocamlformat.0.26.1` installed to format your code correctly. If you haven't installed it yet, you can do so by running:
           
           opam install ocamlformat.0.26.1
       
-      To learn more about `dune fmt`, check out the Man page [here](https://www.mankier.com/1/dune-fmt), or run `man dune fmt` on your terminal.
+      To learn more about `dune fmt`, check out the documentation [here](https://dune.readthedocs.io/en/stable/howto/formatting.html#running-the-formatters).
 
-  2.  **Running Tests:** After formatting your code, run `dune runtest` to execute the project's test suite. This command will compile and run all tests to verify that your changes do not introduce any regressions.
-
-      To run this command, navigate to the root directory of your project in your terminal and execute:
+  2.  **Running Tests:** Compile and run all tests to verify that your changes do not introduce any regressions, using:
        
             dune runtest
       
-      To learn more about `dune runtest`, check out the Man page [here](https://www.mankier.com/1/dune-runtest), or run `man dune runtest` on your terminal.
+      To learn more about `dune runtest`, check out the documentation [here](https://dune.readthedocs.io/en/stable/tests.html#running-tests).
 
 ## Contributing and AI
 

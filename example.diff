@@ -160,28 +160,31 @@ index e69de29..eee417f 100644
 +++ b/dir2/file.txt
 @@ -0,0 +1 @@
 +new text
-diff --git a/dir3/ocaml.txt b/dir3/ocaml.txt
-index 08ch6s5..r4jk867
---- a/dir3/ocaml.txt
-+++ b/dir3/ocaml.txt
+diff --git a/ocaml.txt b/ocaml.txt
+index 4327c22..7becacf 100755
+--- a/ocaml.txt
++++ b/ocaml.txt
 @@ -0,0 +1,2 @@
 +OCaml is an industrial-strength functional programming language with an emphasis on expressiveness and safety.
 +Learning OCaml is interesting.
-@@ -3,4 +3,4 @@
+@@ -4,1 +4,2 @@
 -Want to begin?
 +Take a tour at https://ocaml.org/docs/tour-of-ocaml
 +Write your first OCaml program here - https://ocaml.org/docs/your-first-program
-diff --git a/dir3/outreachy.txt b/dir3/outreachy.txt
-index 0xchj65..e03c6s4
---- a/dir3/outreachy.txt 
-+++ b/dir3/outreachy.txt
-@@ -0,0 +1,2 @@
-+Outreachy provides internships in open source and open science. 
+diff --git a/outreachy.txt b/outreachy.txt
+index 0de0c1f..dad322e 100755
+--- a/outreachy.txt
++++ b/outreachy.txt
+@@ -1,2 +1,2 @@
+ Outreachy internship projects may include programming, research, user experience, documentation, graphical design, data science, marketing, user advocacy, event planning, and more!
+-Outreachy provides internships in open source and open science.
 +Outreachy provides internships to people subject to systemic bias and impacted by underrepresentation in the technical industry where they are living.
-@@ -5,6 +5,7 @@
--Outreachy internship projects may include programming, research, user experience, documentation, graphical design, data science, marketing, user advocacy, event planning, and more!
-+Outreachy is a diversity initiative of Software Freedom Conservancy.
-+It is a life-changing experience.
-@@ -9,10 +9,10 @@
--Outreachy internship is interesting
+@@ -5,2 +5,1 @@
+-Outreachy is a diversity initiative of Software Freedom Conservancy.
+-It is a life-changing experience.
 +Outreachy provides a platform to contribute to open source and open science through learning, collaboration, and contribution.
+@@ -9,2 +9,2 @@
+-Join us in making a difference!
+-Thank you
++Hello
++Outreachy

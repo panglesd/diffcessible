@@ -40,7 +40,7 @@ jobs:
         run: opam exec -- dune runtest
 
       - name: Format
-        run: opam exec -- dune build @fmt
+        run: opam install ocamlformat && opam exec -- dune build @fmt
 
   # install-dependencies:
   #   runs-on: ubuntu-latest

@@ -35,7 +35,13 @@ jobs:
           ocaml-compiler: ${{ matrix.ocaml-compiler }}
 
       - name: Install Dependencies
-        run: opam install ocamlformat.0.26.1 && opam install --deps-only -t -y .
+        run: |
+          opam install ocamlformat.0.26.1
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            opam depext diffcessible
+          fi
+          opam install --deps-only -t -y .
+        # run: opam install ocamlformat.0.26.1 && opam install --deps-only -t -y .
 
       - name: Test
         run: opam exec -- dune runtest

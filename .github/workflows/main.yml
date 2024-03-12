@@ -37,7 +37,36 @@ jobs:
         run: opam install --deps-only -t -y .
 
       - name: Test
-        run: dune runtest
+        run: opam exec -- dune runtest
 
       - name: Format
-        run: dune build @fmt
+        run: opam exec -- dune build @fmt
+
+  # install-dependencies:
+  #   runs-on: ubuntu-latest
+  #   needs: setup-ocaml
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v2
+  #     - name: Install project dependencies
+  #       run: opam install --deps-only -t -y
+
+  # run-tests:
+  #   runs-on: ubuntu-latest
+  #   needs: install-dependencies
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v2
+  #     - name: Run tests
+  #       run: dune runtest
+
+  # check-formatting:
+  #   runs-on: ubuntu-latest
+  #   needs: install-dependencies
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v2
+  #     - name: Check formatting
+  #       env:
+  #         OCAMLFORMAT: "0.26.1"
+  #       run: dune build @fmt

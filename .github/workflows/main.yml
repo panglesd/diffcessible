@@ -34,10 +34,10 @@ jobs:
           ocaml-compiler: ${{ matrix.ocaml-compiler }}
 
       - name: Install Dependencies
-        run: opam install . --deps-only --with-test
+        run: opam install --deps-only -t -y .
 
       - name: Test
         run: dune runtest
 
       - name: Format
-        run: dune fmt 
+        run: dune build @fmt

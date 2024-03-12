@@ -36,18 +36,9 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          opam install ocamlformat.0.26.1
-          if [ "${{ runner.os }}" = "Windows" ]; then
-            choco install diffutils
-            choco install diffstat
-          fi
-          opam install dune.3.11 --deps-only -t -y .
-
-      # - name: Install Dependencies
-      #   run: |
-      #      opam install ocamlformat.0.26.1
-      #      opam install --deps-only -t -y .
-      #   # run: opam install ocamlformat.0.26.1 && opam install --deps-only -t -y .
+           opam install ocamlformat.0.26.1
+           opam install --deps-only -t -y .
+        # run: opam install ocamlformat.0.26.1 && opam install --deps-only -t -y .
 
       - name: Test
         run: opam exec -- dune runtest

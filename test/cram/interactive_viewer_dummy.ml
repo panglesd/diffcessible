@@ -4,18 +4,17 @@ let input_events : Notty.Unescape.event list ref = ref []
 let output_image : Notty.image ref = ref Notty.I.empty
 
 let open_dummy_terminal () : unit =
-  let input_fd = Unix.openfile "/dev/null" Unix.[O_RDWR] 0o666 in
-  let output_fd = Unix.dup Unix.stdout in
+  let (input_fd, output_fd) = Unix.pipe () in
+  let dev_null_fd = Unix.openfile "/dev/null" Unix.[O_WRONLY] 0o666 in
   Unix.dup2 input_fd Unix.stdin;
-  Unix.dup2 output_fd Unix.stdout;
+  Unix.dup2 dev_null_fd Unix.stdout;
   Unix.close input_fd;
   Unix.close output_fd
 
-
-let output_image : Notty.image = !output_image
-
 let print_image () : unit =
-  Notty_unix.output_image output_image;
+  let main_image = Notty.I.vcat [Notty.I.string Notty.A.empty "Hello World" ] in
+  output_image := main_image;
+  Notty_unix.output_image ~fd:stdout !output_image;
   print_endline "Hello world";
   flush stdout
   

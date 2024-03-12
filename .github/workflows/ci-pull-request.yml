@@ -1,0 +1,41 @@
+name: Install, test and format
+
+on:
+  pull_request:
+    branches:
+      - "main"
+
+permissions: read-all
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - macos-latest
+          - ubuntu-latest
+        ocaml-compiler:
+          - "5.1"
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set-up OCaml version:${{ matrix.ocaml-compiler }} in os:${{ matrix.os }}
+        uses: ocaml/setup-ocaml@v2
+        with:
+          ocaml-compiler: ${{ matrix.ocaml-compiler }}
+
+      - name: Install Dependencies
+        run: |
+          opam install --deps-only -t -y .
+          opam install ocamlformat.0.26.1
+
+      - name: Test
+        run: opam exec -- dune runtest
+
+      - name: Format
+        run: opam exec -- dune build @fmt

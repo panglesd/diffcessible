@@ -18,9 +18,14 @@ jobs:
         os:
           - macos-latest
           - ubuntu-latest
-          # - windows-latest
+          - windows-latest
         ocaml-compiler:
           - "5.1"
+        include:
+          - os: windows-latest
+            ocaml-compiler:
+            - "4.14.0"
+
 
     runs-on: ${{ matrix.os }}
 
@@ -34,39 +39,10 @@ jobs:
           ocaml-compiler: ${{ matrix.ocaml-compiler }}
 
       - name: Install Dependencies
-        run: opam install --deps-only -t -y .
+        run: opam install ocamlformat@0.26.1 && opam install --deps-only -t -y .
 
       - name: Test
         run: opam exec -- dune runtest
 
       - name: Format
-        run: opam install ocamlformat && opam exec -- dune build @fmt
-
-  # install-dependencies:
-  #   runs-on: ubuntu-latest
-  #   needs: setup-ocaml
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v2
-  #     - name: Install project dependencies
-  #       run: opam install --deps-only -t -y
-
-  # run-tests:
-  #   runs-on: ubuntu-latest
-  #   needs: install-dependencies
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v2
-  #     - name: Run tests
-  #       run: dune runtest
-
-  # check-formatting:
-  #   runs-on: ubuntu-latest
-  #   needs: install-dependencies
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v2
-  #     - name: Check formatting
-  #       env:
-  #         OCAMLFORMAT: "0.26.1"
-  #       run: dune build @fmt
+        run: opam exec -- dune build @fmt

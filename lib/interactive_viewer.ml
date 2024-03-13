@@ -71,11 +71,11 @@ let view (patches : Patch.t list) =
   in
   let curr_scroll_state = Lwd.var W.default_scroll_state in
   let change_scroll_state action state =
-    let off_screen = action = `Action && state.W.position > state.W.bound in
-    let off_screen_content =
-      action = `Content && state.W.position > state.W.bound
+    let off_screen =
+      (match action with `Action -> true | `Content -> true)
+      && state.W.position > state.W.bound
     in
-    if off_screen || off_screen_content then
+    if off_screen then
       Lwd.set curr_scroll_state { state with position = state.W.bound }
     else Lwd.set curr_scroll_state state
   in

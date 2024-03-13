@@ -65,6 +65,7 @@ let view (patches : Patch.t list) =
       W.vbox
         [
           operation_info z_patches;
+          change_summary z_patches;
           current_operation z_patches;
           W.scrollbox @@ current_hunks z_patches;
           Lwd.pure

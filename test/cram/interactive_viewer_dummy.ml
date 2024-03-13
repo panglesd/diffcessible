@@ -7,42 +7,40 @@ let print_image () : unit =
   let main_image = Notty.I.vcat [Notty.I.string Notty.A.empty "Hello World" ] in
   output_image := main_image;
   Notty_unix.output_image ~fd:stdout !output_image;
-  flush stdout
-  
+
+  print_endline ""
+
 
 let run_dummy_ui () : unit =
   let rec loop () =
-    match !input_events with
-    | [] -> ()
-    | event :: events ->
-      (* Process the event and update the output image *)
-      match event with
-      | `Key (`ASCII 'q', []) ->
-        (* Exit the loop if the 'q' key is pressed *)
+    let ready_fds, _, _ = Unix.select [Unix.stdin] [] [] (-1.0) in
+    if List.mem Unix.stdin ready_fds then (
+      let input_line = input_line stdin in
+      match input_line with
+      | "q" -> 
         ()
       | _ ->
-        (* Ignore other event types *)
         ()
       ;
-
-      input_events := events;
       print_image ();
       loop ()
+    ) else (
+      loop ()
+    )
   in
   print_image ();
   loop ()
-let main () =
-  run_dummy_ui () 
+let main (_input_events : char list) =
+  input_events := List.map (fun c -> `Key (`ASCII c, [])) _input_events;
+  run_dummy_ui ()
 
 let input_events_term =
   let doc = "Input event as a single character" in
-  Cmdliner.Arg.(required & opt (some char) None & info ["input-event"] ~docv:"EVENT" ~doc)
+ Arg.(value & pos_all char [] & info [] ~docv:"EVENT" ~doc)
 
 let cmd =
   let doc = "Interactive Viewer Dummy" in
   let info = Cmd.info "interactive_viewer_dummy" ~version:"VERSION" ~doc in
-  Cmd.v info Term.(const main $ const ())
+  Cmd.v info Term.(const main $  input_events_term)
   
-  let () =
-  Stdlib.exit @@ (Cmd.eval cmd)
-
+let () = exit @@ Cmd.eval cmd

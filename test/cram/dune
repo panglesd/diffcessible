@@ -1,6 +1,6 @@
 (executable
   (name interactive_viewer_dummy)
-  (libraries diffcessible cmdliner notty nottui lwd patch)
+  (libraries diffcessible cmdliner notty nottui lwd)
 )
 
 (env

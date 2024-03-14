@@ -15,15 +15,18 @@ let run_dummy_ui () : unit =
   let rec loop () =
     let ready_fds, _, _ = Unix.select [Unix.stdin] [] [] (-1.0) in
     if List.mem Unix.stdin ready_fds then (
-      let input_char = input_char stdin in  (* Read a single character from stdin *)
-      let input_event = `Key (`ASCII input_char, []) in
-      match input_event with
-      | `Key (`ASCII 'q', []) -> ()
-      | _ ->
-        ()
-      ;
-      print_image ();
-      loop ()
+      try
+        let input_char = input_char stdin in  (* Read a single character from stdin *)
+        let input_event = `Key (`ASCII input_char, []) in
+        match input_event with
+        | `Key (`ASCII 'q', []) -> ()
+        | _ ->
+          ()
+        ;
+        print_image ();
+        loop ()
+      with
+      |End_of_file -> ()
     ) else (
       loop ()
     )

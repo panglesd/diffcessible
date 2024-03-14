@@ -11,28 +11,21 @@ let print_image () : unit =
   print_endline ""
 
 
+
 let run_dummy_ui () : unit =
-  let rec loop () =
-    let ready_fds, _, _ = Unix.select [Unix.stdin] [] [] (-1.0) in
-    if List.mem Unix.stdin ready_fds then (
-      try
-        let input_char = input_char stdin in  (* Read a single character from stdin *)
-        let input_event = `Key (`ASCII input_char, []) in
-        match input_event with
-        | `Key (`ASCII 'q', []) -> ()
-        | _ ->
-          ()
-        ;
+  let rec loop events =
+    match events with
+    | [] -> ()
+    | event :: rest ->
+      match event with
+      | `Key (`ASCII 'q', []) -> ()
+      | _ ->
         print_image ();
-        loop ()
-      with
-      |End_of_file -> ()
-    ) else (
-      loop ()
-    )
+        loop rest
   in
   print_image ();
-  loop ()
+  loop !input_events
+  
 let main (_input_events : char list) =
   input_events := List.map (fun c -> `Key (`ASCII c, [])) _input_events;
   run_dummy_ui ()

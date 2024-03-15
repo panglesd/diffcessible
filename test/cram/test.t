@@ -6,6 +6,3 @@ This is a cram test for the new executable.
 
   $ dummy_terminal n n n
   Hello World
-  Hello World
-  Hello World
-  Hello World

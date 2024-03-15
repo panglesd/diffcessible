@@ -17,11 +17,7 @@ let run_dummy_ui () : unit =
     match events with
     | [] -> ()
     | event :: rest -> (
-        match event with
-        | `Key (`ASCII 'q', []) -> ()
-        | _ ->
-            print_image ();
-            loop rest)
+        match event with `Key (`ASCII 'q', []) -> () | _ -> loop rest)
   in
   print_image ();
   loop !input_events

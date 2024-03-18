@@ -175,4 +175,21 @@ let view (patches : Patch.t list) =
   in
   W.vbox [ ui ]
 
-let start patch = Ui_loop.run ~quit ~tick_period:0.2 (view patch)
+let input_events : Notty.Unescape.event list ref = ref []
+let output_image : Notty.image ref = ref Notty.I.empty
+
+let print_image () : unit =
+  let main_image = Notty.I.vcat [ Notty.I.string Notty.A.empty "" ] in
+  output_image := main_image;
+  Notty_unix.output_image ~fd:stdout !output_image
+
+let start patch events =
+  let rec loop () =
+    if Lwd.peek quit then ()
+    else (
+      input_events := events;
+      print_image ();
+      loop ())
+  in
+  Ui_loop.run ~quit ~tick_period:0.2 (view patch);
+  loop ()

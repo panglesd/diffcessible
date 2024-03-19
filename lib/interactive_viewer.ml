@@ -102,9 +102,8 @@ let change_summary z_patches : ui Lwd.t =
       (format_plural total_additions "addition" "additions")
       (format_plural total_removals "removal" "removals")
   in
-  W.string ~attr:Notty.A.(fg lightcyan) operation_count
+  W.string ~attr:Notty.A.(fg lightcyan) operation_count <<<<<<< HEAD
 
-<<<<<<< HEAD
 let view (patches : Patch.t list) =
   let help_panel =
     Ui.vcat

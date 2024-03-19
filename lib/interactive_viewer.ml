@@ -104,6 +104,7 @@ let change_summary z_patches : ui Lwd.t =
   in
   W.string ~attr:Notty.A.(fg lightcyan) operation_count
 
+<<<<<<< HEAD
 let view (patches : Patch.t list) =
   let help_panel =
     Ui.vcat

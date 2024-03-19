@@ -104,6 +104,15 @@ let change_summary z_patches : ui Lwd.t =
   in
   W.string ~attr:Notty.A.(fg lightcyan) operation_count
 
+let content_image = Lwd.var (Notty.I.vcat [ Notty.I.string Notty.A.empty "" ])
+
+let content_image_renderer (ui : ui) (height_request : int) =
+  let height = Ui.layout_height ui in
+  let width = Ui.layout_width ui in
+  let renderer = Renderer.make () in
+  Renderer.update renderer (width, height * height_request) ui;
+  renderer
+
 let view (patches : Patch.t list) =
   let help_panel =
     Ui.vcat
@@ -175,21 +184,23 @@ let view (patches : Patch.t list) =
   in
   W.vbox [ ui ]
 
-let input_events : Notty.Unescape.event list ref = ref []
-let output_image : Notty.image ref = ref Notty.I.empty
+  let content_length = List.length content in
+  let content_ui = W.vbox content in
+  let view_ui = Lwd.quick_sample (Lwd.observe content_ui) in
+  let image = Renderer.image (content_image_renderer view_ui content_length) in
+  Lwd.set content_image image;
+  content_ui
 
 let print_image () : unit =
-  let main_image = Notty.I.vcat [ Notty.I.string Notty.A.empty "" ] in
-  output_image := main_image;
-  Notty_unix.output_image ~fd:stdout !output_image
+  Notty_unix.output_image (Notty_unix.eol (Lwd.peek content_image))
 
 let start patch events =
   let rec loop () =
     if Lwd.peek quit then ()
     else (
-      input_events := events;
       print_image ();
       loop ())
   in
-  Ui_loop.run ~quit ~tick_period:0.2 (view patch);
-  loop ()
+  Ui_loop.run ~quit ~tick_period:0.2 (view patch events);
+  loop ();
+  print_image ()

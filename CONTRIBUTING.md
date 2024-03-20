@@ -4,7 +4,7 @@ Thank you for your interest in contributing to Diffcessible! This guide outlines
 
 ## Getting Started
 
-1. **Set Up the Project:** Make sure you have forked the repository and set up the project on your local machine. Follow the installation instructions in the README.md file.
+1. **Set Up the Project:** Make sure you have [forked](https://github.com/panglesd/diffcessible/fork) the repository and set up the project on your local machine. Follow the installation instructions in the [README.md](https://github.com/panglesd/diffcessible/blob/main/README.md) file.
 
 2. **Understand the Code:** Spend some time getting familiar with the codebase. It's important to have a good grasp of how the project is structured before starting to contribute.
 
@@ -27,7 +27,22 @@ Encountering challenges is a normal part of the process. If you need help:
 ## Contributing Guidelines
 
 - **Commit Messages:** Use concise and descriptive commit messages. This helps with the project's history and review process.
-- **Pull Requests:** Before submitting a pull request, make sure your code complies with the project's standards and passes all tests by running `dune fmt` and `dune runtest`. Note you will need `ocamlformat=0.26.1`.
+- **Pull Requests:** Before submitting a pull request, make sure your code complies with the project's standards and passes all tests. This process involves two key steps:
+  1. **Code Formatting:** To automatically format your code according to the project's style guidelines, run the following command:
+       
+            dune fmt
+      
+      **Note:** You will need `ocamlformat.0.26.1` installed to format your code correctly. If you haven't installed it yet, you can do so by running:
+          
+          opam install ocamlformat.0.26.1
+      
+      To learn more about `dune fmt`, check out the documentation [here](https://dune.readthedocs.io/en/stable/howto/formatting.html#running-the-formatters).
+
+  2.  **Running Tests:** Compile and run all tests to verify that your changes do not introduce any regressions, using:
+       
+            dune runtest
+      
+      To learn more about `dune runtest`, check out the documentation [here](https://dune.readthedocs.io/en/stable/tests.html#running-tests).
 
 ## Contributing and AI
 

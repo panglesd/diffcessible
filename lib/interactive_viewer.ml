@@ -106,11 +106,11 @@ let change_summary z_patches : ui Lwd.t =
 
 let content_image = Lwd.var (Notty.I.vcat [ Notty.I.string Notty.A.empty "" ])
 
-let content_image_renderer (ui : ui) (height_request : int) =
+let content_image_renderer (ui : ui) =
   let height = Ui.layout_height ui in
   let width = Ui.layout_width ui in
   let renderer = Renderer.make () in
-  Renderer.update renderer (width, height * height_request) ui;
+  Renderer.update renderer (width, height * 3) ui;
   renderer
 
 let view (patches : Patch.t list) =
@@ -184,23 +184,14 @@ let view (patches : Patch.t list) =
   in
   W.vbox [ ui ]
 
-  let content_length = List.length content in
-  let content_ui = W.vbox content in
-  let view_ui = Lwd.quick_sample (Lwd.observe content_ui) in
-  let image = Renderer.image (content_image_renderer view_ui content_length) in
+  let view_ui = Lwd.quick_sample (Lwd.observe (W.vbox content)) in
+  let image = Renderer.image (content_image_renderer view_ui) in
   Lwd.set content_image image;
-  content_ui
+  W.vbox content
 
 let print_image () : unit =
   Notty_unix.output_image (Notty_unix.eol (Lwd.peek content_image))
 
-let start patch events =
-  let rec loop () =
-    if Lwd.peek quit then ()
-    else (
-      print_image ();
-      loop ())
-  in
+let start patch events test =
   Ui_loop.run ~quit ~tick_period:0.2 (view patch events);
-  loop ();
-  print_image ()
+  if test then print_image ()

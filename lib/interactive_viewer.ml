@@ -109,7 +109,7 @@ let view (patches : Patch.t list) =
     Ui.vcat
       [
         W.string "Help Panel:\n";
-        W.string "h:   Toggle the help panel";
+        W.string "h:   Open the help panel";
         W.string "q:   Quit the diffcessible viewer";
         W.string "n:   Move to the next operation, if present";
         W.string "p:   Move to the previous operation, if present";
@@ -169,8 +169,8 @@ let view (patches : Patch.t list) =
                      `Handled
                  | _ -> `Unhandled)
                (W.string
-                  "Type 'q' to quit, 'n' to go to the next operation, 'p' to \
-                   go to the previous operation, 'h' to go to the help panel");
+                  "Type 'h' to go to the help panel, 'q' to quit, 'n' to go to \
+                   the next operation, 'p' to go to the previous operation");
         ]
   in
   W.vbox [ ui ]

@@ -110,7 +110,7 @@ let content_image_renderer (ui : ui) =
   let height = Ui.layout_height ui in
   let width = Ui.layout_width ui in
   let renderer = Renderer.make () in
-  Renderer.update renderer (width, height * 4) ui;
+  Renderer.update renderer (width, height * 3) ui;
   renderer
 
 let view (patches : Patch.t list) =

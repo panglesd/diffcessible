@@ -104,6 +104,66 @@ let change_summary z_patches : ui Lwd.t =
   in
   W.string ~attr:Notty.A.(fg lightcyan) operation_count
 
+
+(** Side by side diff view implementation **)
+
+type view_mode = SideBySide | Normal
+
+let view_mode = Lwd.var SideBySide
+
+let toggle_view_mode () =
+  match Lwd.peek view_mode with
+  | Normal -> Lwd.set view_mode SideBySide
+  | SideBySide -> Lwd.set view_mode Normal
+
+let rec split_and_align_hunk hunks mine_acc their_acc =
+  match hunks with
+  | [] -> (List.rev mine_acc, List.rev their_acc)
+  | `Common _ as common :: t ->
+      split_and_align_hunk t (common :: mine_acc) (common :: their_acc)
+  | `Mine s :: t ->
+      split_and_align_hunk t (`Mine s :: mine_acc) (`Common "" :: their_acc)
+  | `Their s :: t ->
+      split_and_align_hunk t (`Common "" :: mine_acc) (`Their s :: their_acc)
+
+let lines_to_ui_with_numbers lines attr_line_number attr_change =
+  List.mapi
+    (fun index line ->
+      let line_number_ui = W.string ~attr:attr_line_number (Printf.sprintf "%4d " (index + 1)) in
+      let ui_line, attr =
+        match line with
+        | `Common s -> (Printf.sprintf "  %s" s, attr_line_number)
+        | `Mine s -> (Printf.sprintf "- %s" s, attr_change)
+        | `Their s -> (Printf.sprintf "+ %s" s, attr_change)
+      in
+      Ui.hcat [line_number_ui; W.string ~attr ui_line])
+    lines
+
+let ui_of_hunk_side_by_side hunk =
+  let mine_lines, their_lines = split_and_align_hunk hunk.Patch.lines [] [] in
+
+  let attr_line_number = Notty.A.(fg lightblue) in
+  let attr_mine = Notty.A.(fg red ++ st bold) in
+  let attr_their = Notty.A.(fg green ++ st bold) in
+
+  let separator = W.string ~attr:attr_line_number "|" in
+
+  let mine_ui = lines_to_ui_with_numbers mine_lines attr_line_number attr_mine in
+  let their_ui = lines_to_ui_with_numbers their_lines attr_line_number attr_their in
+
+  let space = Ui.space 1 0 in
+  Ui.hcat [Ui.vcat mine_ui; space; separator; space; Ui.vcat their_ui]
+
+
+let current_hunks_side_by_side z_patches : ui Lwd.t =
+  let$ z = Lwd.get z_patches in
+  let p = Zipper.get_focus z in
+  let hunks_ui = List.map ui_of_hunk_side_by_side p.Patch.hunks in
+  Ui.vcat @@ hunks_ui
+
+
+(** end of side by side diff view implementation **)
+
 let view (patches : Patch.t list) =
   let help_panel =
     Ui.vcat
@@ -119,6 +179,12 @@ let view (patches : Patch.t list) =
     match Zipper.zipper_of_list patches with
     | Some z -> Lwd.var z
     | None -> failwith "zipper_of_list: empty list"
+  in
+  let hunks_ui =
+    Lwd.bind (Lwd.get view_mode) ~f:(fun mode ->
+        match mode with
+        | Normal -> current_hunks z_patches
+        | SideBySide -> current_hunks_side_by_side z_patches)
   in
   let curr_scroll_state = Lwd.var W.default_scroll_state in
   let change_scroll_state _action state =
@@ -151,7 +217,7 @@ let view (patches : Patch.t list) =
           W.vscroll_area
             ~state:(Lwd.get curr_scroll_state)
             ~change:change_scroll_state
-          @@ current_hunks z_patches;
+          hunks_ui;
           Lwd.pure
           @@ Ui.keyboard_area
                (function
@@ -167,12 +233,17 @@ let view (patches : Patch.t list) =
                  | `ASCII 'h', [] ->
                      Lwd.set help true;
                      `Handled
+                 | `ASCII 't', [] ->
+                    toggle_view_mode ();
+                    `Handled
                  | _ -> `Unhandled)
                (W.string
                   "Type 'h' to go to the help panel, 'q' to quit, 'n' to go to \
-                   the next operation, 'p' to go to the previous operation");
+                   the next operation, 'p' to go to the previous operation. Press 't' to toggle view mode.");
         ]
   in
   W.vbox [ ui ]
 
 let start patch = Ui_loop.run ~quit ~tick_period:0.2 (view patch)
+
+

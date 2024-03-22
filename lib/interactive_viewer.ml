@@ -146,13 +146,11 @@ let ui_of_hunk_side_by_side hunk =
   let attr_mine = Notty.A.(fg red ++ st bold) in
   let attr_their = Notty.A.(fg green ++ st bold) in
 
-  let separator = W.string ~attr:attr_line_number "|" in
-
   let mine_ui = lines_to_ui_with_numbers mine_lines attr_line_number attr_mine in
   let their_ui = lines_to_ui_with_numbers their_lines attr_line_number attr_their in
 
   let space = Ui.space 1 0 in
-  Ui.hcat [Ui.vcat mine_ui; space; separator; space; Ui.vcat their_ui]
+  Ui.hcat [Ui.vcat mine_ui; space; space; Ui.vcat their_ui]
 
 
 let current_hunks_side_by_side z_patches : ui Lwd.t =

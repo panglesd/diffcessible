@@ -4,11 +4,19 @@ open Lwd_infix
 
 let operation_info z_patches : ui Lwd.t =
   let$ z = Lwd.get z_patches in
+  let p = Zipper.get_focus z in
+  let num_hunks = List.length p.Patch.hunks in
+  let hunk_text =
+    match num_hunks with
+    | 1 -> "1 hunk"
+    | _ -> Printf.sprintf "%d hunks" num_hunks
+  in
   W.string
     ~attr:Notty.A.(fg lightcyan)
-    (Printf.sprintf "Operation %d of %d"
+    (Printf.sprintf "Operation %d of %d, %s"
        (Zipper.get_current_index z + 1)
-       (Zipper.get_total_length z))
+       (Zipper.get_total_length z)
+       hunk_text)
 
 let ui_of_operation operation =
   let green_bold_attr = Notty.A.(fg green ++ st bold) in
@@ -60,112 +68,111 @@ let navigate z_patches (dir : direction) : unit =
   | Prev -> Lwd.set z_patches (Zipper.prev z)
   | Next -> Lwd.set z_patches (Zipper.next z)
 
-(* let pure_str s = Lwd.pure (W.string s) *)
 let quit = Lwd.var false
+let help = Lwd.var false
 
-let split_hunk hunk =
-  let mine, their =
-    List.fold_left
-      (fun (mine_acc, their_acc) line ->
-        match line with
-        | `Common s -> (mine_acc @ [ `Common s ], their_acc @ [ `Common s ])
-        | `Mine s -> (mine_acc @ [ `Mine s ], their_acc)
-        | `Their s -> (mine_acc, their_acc @ [ `Their s ]))
-      ([], []) hunk.Patch.lines
+let additions_and_removals lines =
+  let add_line (additions, removals) line =
+    match line with
+    | `Their _ -> (additions + 1, removals)
+    | `Mine _ -> (additions, removals + 1)
+    | `Common _ -> (additions, removals)
   in
-  (mine, their)
+  List.fold_left add_line (0, 0) lines
 
-let lines_to_ui_with_numbers lines attr_line_number attr_change =
-  List.mapi
-    (fun index line ->
-      let ui_line, attr =
-        match line with
-        | `Common s ->
-            (s, attr_line_number) (* Common lines use the line number color *)
-        | `Mine s -> (s, attr_change) (* Mine lines use the deletion color *)
-        | `Their s -> (s, attr_change)
-        (* Their lines use the addition color *)
+let accumulate_count hunks =
+  List.fold_left
+    (fun (add_acc, remove_acc) hunk ->
+      let add_in_hunk, remove_in_hunk =
+        additions_and_removals hunk.Patch.lines
       in
-      Ui.hcat
-        [
-          W.string ~attr:attr_line_number (Printf.sprintf "%4d " (index + 1));
-          W.string ~attr ui_line;
-        ])
-    lines
+      (add_acc + add_in_hunk, remove_acc + remove_in_hunk))
+    (0, 0) hunks
 
-let ui_of_hunk_side_by_side hunk =
-  let mine_lines, their_lines = split_hunk hunk in
-
-  let attr_line_number = Notty.A.(fg lightblue) in
-  let attr_mine = Notty.A.(fg red ++ st bold) in
-  let attr_their = Notty.A.(fg green ++ st bold) in
-
-  let separator = W.string ~attr:attr_line_number "|" in
-
-  (* For mine lines, we use the deletion color, and for their lines, the addition color *)
-  let mine_ui =
-    lines_to_ui_with_numbers mine_lines attr_line_number attr_mine
-  in
-  let their_ui =
-    lines_to_ui_with_numbers their_lines attr_line_number attr_their
-  in
-
-  let space = Ui.space 1 0 in
-  (* Adding a visual gap *)
-  Ui.hcat [ Ui.vcat mine_ui; space; separator; space; Ui.vcat their_ui ]
-
-let current_hunks_side_by_side z_patches : ui Lwd.t =
+let change_summary z_patches : ui Lwd.t =
   let$ z = Lwd.get z_patches in
   let p = Zipper.get_focus z in
-  let hunks_ui = List.map ui_of_hunk_side_by_side p.Patch.hunks in
-  Ui.vcat @@ hunks_ui
-
-type view_mode = SideBySide | Regular
-
-let view_mode = Lwd.var SideBySide
-
-let toggle_view_mode () =
-  match Lwd.peek view_mode with
-  | Regular -> Lwd.set view_mode SideBySide
-  | SideBySide -> Lwd.set view_mode Regular
+  let total_additions, total_removals = accumulate_count p.Patch.hunks in
+  let format_plural n singular plural =
+    if n = 1 then Printf.sprintf "%d %s" n singular
+    else Printf.sprintf "%d %s" n plural
+  in
+  let operation_count =
+    Printf.sprintf "%s, %s"
+      (format_plural total_additions "addition" "additions")
+      (format_plural total_removals "removal" "removals")
+  in
+  W.string ~attr:Notty.A.(fg lightcyan) operation_count
 
 let view (patches : Patch.t list) =
+  let help_panel =
+    Ui.vcat
+      [
+        W.string "Help Panel:\n";
+        W.string "h:   Open the help panel";
+        W.string "q:   Quit the diffcessible viewer";
+        W.string "n:   Move to the next operation, if present";
+        W.string "p:   Move to the previous operation, if present";
+      ]
+  in
   let z_patches : 'a Zipper.t Lwd.var =
     match Zipper.zipper_of_list patches with
     | Some z -> Lwd.var z
     | None -> failwith "zipper_of_list: empty list"
   in
-  let hunks_ui =
-    Lwd.bind (Lwd.get view_mode) ~f:(fun mode ->
-        match mode with
-        | Regular -> current_hunks z_patches
-        | SideBySide -> current_hunks_side_by_side z_patches)
+  let curr_scroll_state = Lwd.var W.default_scroll_state in
+  let change_scroll_state _action state =
+    let off_screen = state.W.position > state.W.bound in
+    if off_screen then
+      Lwd.set curr_scroll_state { state with position = state.W.bound }
+    else Lwd.set curr_scroll_state state
   in
-  W.vbox
-    [
-      operation_info z_patches;
-      current_operation z_patches;
-      W.scrollbox hunks_ui;
-      (* This now dynamically updates based on view_mode *)
-      Lwd.pure
-      @@ Ui.keyboard_area
-           (function
-             | `ASCII 'q', [] ->
-                 Lwd.set quit true;
-                 `Handled
-             | `ASCII 'n', [] ->
-                 navigate z_patches Next;
-                 `Handled
-             | `ASCII 'p', [] ->
-                 navigate z_patches Prev;
-                 `Handled
-             | `ASCII 't', [] ->
-                 toggle_view_mode ();
-                 `Handled
-             | _ -> `Unhandled)
-           (W.string
-              "Type 'q' to quit, 'n' to go to the next operation, 'p' to go to \
-               the previous operation, 't' to toggle view mode");
-    ]
+  let ui =
+    let$* help_visible = Lwd.get help in
+    if help_visible then
+      W.vbox
+        [
+          W.scrollbox @@ Lwd.pure @@ help_panel;
+          Lwd.pure
+          @@ Ui.keyboard_area
+               (function
+                 | `ASCII 'q', [] ->
+                     Lwd.set help false;
+                     `Handled
+                 | _ -> `Unhandled)
+               (W.string "Type 'q' to exit the help panel");
+        ]
+    else
+      W.vbox
+        [
+          operation_info z_patches;
+          change_summary z_patches;
+          current_operation z_patches;
+          W.vscroll_area
+            ~state:(Lwd.get curr_scroll_state)
+            ~change:change_scroll_state
+          @@ current_hunks z_patches;
+          Lwd.pure
+          @@ Ui.keyboard_area
+               (function
+                 | `ASCII 'q', [] ->
+                     Lwd.set quit true;
+                     `Handled
+                 | `ASCII 'n', [] ->
+                     navigate z_patches Next;
+                     `Handled
+                 | `ASCII 'p', [] ->
+                     navigate z_patches Prev;
+                     `Handled
+                 | `ASCII 'h', [] ->
+                     Lwd.set help true;
+                     `Handled
+                 | _ -> `Unhandled)
+               (W.string
+                  "Type 'h' to go to the help panel, 'q' to quit, 'n' to go to \
+                   the next operation, 'p' to go to the previous operation");
+        ]
+  in
+  W.vbox [ ui ]
 
 let start patch = Ui_loop.run ~quit ~tick_period:0.2 (view patch)

@@ -127,18 +127,23 @@ let rec split_and_align_hunk hunks mine_acc their_acc =
   | `Their s :: t ->
       split_and_align_hunk t (`Common "" :: mine_acc) (`Their s :: their_acc)
 
-
 let wrap_text max_width s =
   let rec aux acc curr line =
-    if String.length line <= max_width then
-      List.rev (line :: acc)  (* Remaining text fits in a line *)
+    if String.length line <= max_width then List.rev (line :: acc)
+      (* Remaining text fits in a line *)
     else
       (* Find last space within max_width to split at, or split at max_width if no space found *)
-      let split_index = try String.rindex_from line (max_width - 1) ' ' with Not_found -> max_width in
+      let split_index =
+        try String.rindex_from line (max_width - 1) ' '
+        with Not_found -> max_width
+      in
       let before = String.sub line 0 split_index in
-      let after = String.sub line (split_index + 1) (String.length line - split_index - 1) in
+      let after =
+        String.sub line (split_index + 1) (String.length line - split_index - 1)
+      in
       aux (before :: acc) (curr + 1) after
-  in aux [] 0 s
+  in
+  aux [] 0 s
 
 let lines_to_ui lines attr_line_number attr_change =
   List.map
@@ -152,7 +157,6 @@ let lines_to_ui lines attr_line_number attr_change =
       W.string ~attr ui_line)
     lines
 
-
 let ui_of_hunk_side_by_side hunk =
   let mine_lines, their_lines = split_and_align_hunk hunk.Patch.lines [] [] in
 
@@ -164,12 +168,12 @@ let ui_of_hunk_side_by_side hunk =
   let their_ui = lines_to_ui their_lines attr_line_number attr_their in
 
   let space = Ui.space 1 0 in
-  Ui.hcat [
-    Ui.resize ~sw:1 (Ui.vcat mine_ui); 
-    space;
-    Ui.resize ~sw:1 (Ui.vcat their_ui)  
-  ]
-
+  Ui.hcat
+    [
+      Ui.resize ~sw:1 (Ui.vcat mine_ui);
+      space;
+      Ui.resize ~sw:1 (Ui.vcat their_ui);
+    ]
 
 let current_hunks_side_by_side z_patches : ui Lwd.t =
   let$ z = Lwd.get z_patches in

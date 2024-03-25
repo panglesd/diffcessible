@@ -104,13 +104,11 @@ let change_summary z_patches : ui Lwd.t =
   in
   W.string ~attr:Notty.A.(fg lightcyan) operation_count
 
-let content_image = Lwd.var (Notty.I.vcat [ Notty.I.string Notty.A.empty "" ])
-
 let content_image_renderer (ui : ui) =
   let height = Ui.layout_height ui in
   let width = Ui.layout_width ui in
   let renderer = Renderer.make () in
-  Renderer.update renderer (width, height * 3) ui;
+  Renderer.update renderer (width, height * 4) ui;
   renderer
 
 let view (patches : Patch.t list) =

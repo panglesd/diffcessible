@@ -16,3 +16,7 @@ This is a cram test for the new executable.
   
   
   
+  
+  
+  
+  Type 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation

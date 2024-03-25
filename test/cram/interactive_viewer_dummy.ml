@@ -5,8 +5,7 @@ let main file_path custom_inputs =
   let file = In_channel.open_bin file_path in
   let s = In_channel.input_all file in
   let patch = Patch.to_diffs s in
-  let events = Notty.Unescape.decode (List.map Uchar.of_char custom_inputs) in
-  Interactive_viewer.start_test patch events
+  Interactive_viewer.start_test patch custom_inputs
 
 let file_arg =
   let doc = "Path to the file containing the Git diff." in

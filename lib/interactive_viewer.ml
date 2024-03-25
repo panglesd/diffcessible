@@ -130,9 +130,7 @@ let rec split_and_align_hunk hunks mine_acc their_acc =
 let wrap_text max_width s =
   let rec aux acc curr line =
     if String.length line <= max_width then List.rev (line :: acc)
-      (* Remaining text fits in a line *)
     else
-      (* Find last space within max_width to split at, or split at max_width if no space found *)
       let split_index =
         try String.rindex_from line (max_width - 1) ' '
         with Not_found -> max_width
@@ -145,27 +143,33 @@ let wrap_text max_width s =
   in
   aux [] 0 s
 
-let lines_to_ui lines attr_line_number attr_change =
-  List.map
-    (fun line ->
-      let ui_line, attr =
-        match line with
-        | `Common s -> (Printf.sprintf "  %s" s, attr_line_number)
-        | `Mine s -> (Printf.sprintf "- %s" s, attr_change)
-        | `Their s -> (Printf.sprintf "+ %s" s, attr_change)
-      in
-      W.string ~attr ui_line)
-    lines
+let lines_to_ui lines attr_line_number attr_change max_width =
+  List.flatten
+    (List.map
+       (fun line ->
+         let content, attr =
+           match line with
+           | `Common s -> (s, attr_line_number)
+           | `Mine s -> (s, attr_change)
+           | `Their s -> (s, attr_change)
+         in
+         let wrapped_lines = wrap_text max_width content in
+         List.map
+           (fun l -> W.string ~attr (Printf.sprintf "  %s" l))
+           wrapped_lines)
+       lines)
 
-let ui_of_hunk_side_by_side hunk =
+let ui_of_hunk_side_by_side hunk max_width =
   let mine_lines, their_lines = split_and_align_hunk hunk.Patch.lines [] [] in
 
   let attr_line_number = Notty.A.(fg lightblue) in
   let attr_mine = Notty.A.(fg red ++ st bold) in
   let attr_their = Notty.A.(fg green ++ st bold) in
 
-  let mine_ui = lines_to_ui mine_lines attr_line_number attr_mine in
-  let their_ui = lines_to_ui their_lines attr_line_number attr_their in
+  let mine_ui = lines_to_ui mine_lines attr_line_number attr_mine max_width in
+  let their_ui =
+    lines_to_ui their_lines attr_line_number attr_their max_width
+  in
 
   let space = Ui.space 1 0 in
   Ui.hcat
@@ -175,10 +179,12 @@ let ui_of_hunk_side_by_side hunk =
       Ui.resize ~sw:1 (Ui.vcat their_ui);
     ]
 
-let current_hunks_side_by_side z_patches : ui Lwd.t =
+let current_hunks_side_by_side z_patches max_width : ui Lwd.t =
   let$ z = Lwd.get z_patches in
   let p = Zipper.get_focus z in
-  let hunks_ui = List.map ui_of_hunk_side_by_side p.Patch.hunks in
+  let hunks_ui =
+    List.map (fun h -> ui_of_hunk_side_by_side h max_width) p.Patch.hunks
+  in
   Ui.vcat @@ hunks_ui
 
 (** end of side by side diff view implementation **)
@@ -199,11 +205,12 @@ let view (patches : Patch.t list) =
     | Some z -> Lwd.var z
     | None -> failwith "zipper_of_list: empty list"
   in
+  let max_width = 80 in
   let hunks_ui =
     Lwd.bind (Lwd.get view_mode) ~f:(fun mode ->
         match mode with
         | Normal -> current_hunks z_patches
-        | SideBySide -> current_hunks_side_by_side z_patches)
+        | SideBySide -> current_hunks_side_by_side z_patches max_width)
   in
   let curr_scroll_state = Lwd.var W.default_scroll_state in
   let change_scroll_state _action state =

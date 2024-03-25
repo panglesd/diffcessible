@@ -104,12 +104,11 @@ let change_summary z_patches : ui Lwd.t =
   in
   W.string ~attr:Notty.A.(fg lightcyan) operation_count
 
-
 (** Side by side diff view implementation **)
 
 type view_mode = SideBySide | Normal
 
-let view_mode = Lwd.var SideBySide
+let view_mode = Lwd.var Normal
 
 let toggle_view_mode () =
   match Lwd.peek view_mode with
@@ -119,25 +118,40 @@ let toggle_view_mode () =
 let rec split_and_align_hunk hunks mine_acc their_acc =
   match hunks with
   | [] -> (List.rev mine_acc, List.rev their_acc)
-  | `Common _ as common :: t ->
+  | (`Common _ as common) :: t ->
       split_and_align_hunk t (common :: mine_acc) (common :: their_acc)
+  | `Mine s :: `Their s' :: t ->
+      split_and_align_hunk t (`Mine s :: mine_acc) (`Their s' :: their_acc)
   | `Mine s :: t ->
       split_and_align_hunk t (`Mine s :: mine_acc) (`Common "" :: their_acc)
   | `Their s :: t ->
       split_and_align_hunk t (`Common "" :: mine_acc) (`Their s :: their_acc)
 
-let lines_to_ui_with_numbers lines attr_line_number attr_change =
-  List.mapi
-    (fun index line ->
-      let line_number_ui = W.string ~attr:attr_line_number (Printf.sprintf "%4d " (index + 1)) in
+
+let wrap_text max_width s =
+  let rec aux acc curr line =
+    if String.length line <= max_width then
+      List.rev (line :: acc)  (* Remaining text fits in a line *)
+    else
+      (* Find last space within max_width to split at, or split at max_width if no space found *)
+      let split_index = try String.rindex_from line (max_width - 1) ' ' with Not_found -> max_width in
+      let before = String.sub line 0 split_index in
+      let after = String.sub line (split_index + 1) (String.length line - split_index - 1) in
+      aux (before :: acc) (curr + 1) after
+  in aux [] 0 s
+
+let lines_to_ui lines attr_line_number attr_change =
+  List.map
+    (fun line ->
       let ui_line, attr =
         match line with
         | `Common s -> (Printf.sprintf "  %s" s, attr_line_number)
         | `Mine s -> (Printf.sprintf "- %s" s, attr_change)
         | `Their s -> (Printf.sprintf "+ %s" s, attr_change)
       in
-      Ui.hcat [line_number_ui; W.string ~attr ui_line])
+      W.string ~attr ui_line)
     lines
+
 
 let ui_of_hunk_side_by_side hunk =
   let mine_lines, their_lines = split_and_align_hunk hunk.Patch.lines [] [] in
@@ -146,11 +160,15 @@ let ui_of_hunk_side_by_side hunk =
   let attr_mine = Notty.A.(fg red ++ st bold) in
   let attr_their = Notty.A.(fg green ++ st bold) in
 
-  let mine_ui = lines_to_ui_with_numbers mine_lines attr_line_number attr_mine in
-  let their_ui = lines_to_ui_with_numbers their_lines attr_line_number attr_their in
+  let mine_ui = lines_to_ui mine_lines attr_line_number attr_mine in
+  let their_ui = lines_to_ui their_lines attr_line_number attr_their in
 
   let space = Ui.space 1 0 in
-  Ui.hcat [Ui.vcat mine_ui; space; space; Ui.vcat their_ui]
+  Ui.hcat [
+    Ui.resize ~sw:1 (Ui.vcat mine_ui); 
+    space;
+    Ui.resize ~sw:1 (Ui.vcat their_ui)  
+  ]
 
 
 let current_hunks_side_by_side z_patches : ui Lwd.t =
@@ -158,7 +176,6 @@ let current_hunks_side_by_side z_patches : ui Lwd.t =
   let p = Zipper.get_focus z in
   let hunks_ui = List.map ui_of_hunk_side_by_side p.Patch.hunks in
   Ui.vcat @@ hunks_ui
-
 
 (** end of side by side diff view implementation **)
 
@@ -214,8 +231,7 @@ let view (patches : Patch.t list) =
           current_operation z_patches;
           W.vscroll_area
             ~state:(Lwd.get curr_scroll_state)
-            ~change:change_scroll_state
-          hunks_ui;
+            ~change:change_scroll_state hunks_ui;
           Lwd.pure
           @@ Ui.keyboard_area
                (function
@@ -232,16 +248,15 @@ let view (patches : Patch.t list) =
                      Lwd.set help true;
                      `Handled
                  | `ASCII 't', [] ->
-                    toggle_view_mode ();
-                    `Handled
+                     toggle_view_mode ();
+                     `Handled
                  | _ -> `Unhandled)
                (W.string
                   "Type 'h' to go to the help panel, 'q' to quit, 'n' to go to \
-                   the next operation, 'p' to go to the previous operation. Press 't' to toggle view mode.");
+                   the next operation, 'p' to go to the previous operation. \
+                   Press 't' to toggle view mode.");
         ]
   in
   W.vbox [ ui ]
 
 let start patch = Ui_loop.run ~quit ~tick_period:0.2 (view patch)
-
-

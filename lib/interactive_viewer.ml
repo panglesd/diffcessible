@@ -187,23 +187,24 @@ let convert_char_to_key (c : char) : Ui.key = (`ASCII c, [])
 
 let start_test patch events =
   let content_ui_root = Lwd.observe (view patch) in
+  let content_ui = Lwd.quick_sample content_ui_root in
+  let ui_renderer = content_image_renderer content_ui in
 
-  let rec process_events (events : char list) (image : Notty.image) :
-      Notty.image =
+  let rec process_events (events : char list) =
     match events with
-    | [] -> image
+    | [] -> ()
     | event :: rest ->
         let ui_event = convert_char_to_key event in
 
-        let content_ui = Lwd.quick_sample content_ui_root in
-        let ui_renderer = content_image_renderer content_ui in
-
         ignore (Renderer.dispatch_key ui_renderer ui_event);
 
-        process_events rest (Renderer.image ui_renderer)
+        process_events rest
   in
 
-  let image = process_events events Notty.I.empty in
+  process_events events;
+  let init_image =
+    Renderer.image (content_image_renderer (Lwd.quick_sample content_ui_root))
+  in
+  Notty_unix.output_image init_image;
   Lwd.quick_release content_ui_root;
-  Notty_unix.output_image image;
   print_newline ()

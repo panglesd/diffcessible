@@ -182,14 +182,28 @@ let view (patches : Patch.t list) =
   in
   W.vbox [ ui ]
 
-  let view_ui = Lwd.quick_sample (Lwd.observe (W.vbox content)) in
-  let image = Renderer.image (content_image_renderer view_ui) in
-  Lwd.set content_image image;
-  W.vbox content
+let start patch = Ui_loop.run ~quit ~tick_period:0.2 (view patch)
+let convert_char_to_key (c : char) : Ui.key = (`ASCII c, [])
 
-let print_image () : unit =
-  Notty_unix.output_image (Notty_unix.eol (Lwd.peek content_image))
+let start_test patch events =
+  let content_ui_root = Lwd.observe (view patch) in
 
-let start patch events test =
-  Ui_loop.run ~quit ~tick_period:0.2 (view patch events);
-  if test then print_image ()
+  let rec process_events (events : char list) (image : Notty.image) :
+      Notty.image =
+    match events with
+    | [] -> image
+    | event :: rest ->
+        let ui_event = convert_char_to_key event in
+
+        let content_ui = Lwd.quick_sample content_ui_root in
+        let ui_renderer = content_image_renderer content_ui in
+
+        ignore (Renderer.dispatch_key ui_renderer ui_event);
+
+        process_events rest (Renderer.image ui_renderer)
+  in
+
+  let image = process_events events Notty.I.empty in
+  Lwd.quick_release content_ui_root;
+  Notty_unix.output_image image;
+  print_newline ()

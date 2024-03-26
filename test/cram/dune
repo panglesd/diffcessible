@@ -8,4 +8,4 @@
    (./interactive_viewer_dummy.exe as dummy_terminal))))
 
 (cram
- (deps %{bin:dummy_terminal}))
+ (deps %{bin:dummy_terminal} ./example.diff))

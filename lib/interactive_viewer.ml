@@ -47,7 +47,12 @@ let ui_of_operation operation =
       Ui.hcat
         [ W.string "Modification of "; W.string ~attr:blue_bold_attr path ]
 
-let string_of_hunk = Format.asprintf "%a" Patch.pp_hunk
+let colorize_hunk hunk =
+  let open Ansi in
+  match hunk with
+  | Patch.Context lines -> sprintf "%s%s%s" (fg_color Yellow) lines reset_color
+  | Patch.Addition lines -> sprintf "%s%s%s" (fg_color Green) lines reset_color
+  | Patch.Deletion lines -> sprintf "%s%s%s" (fg_color Red) lines reset_color
 
 let current_operation z_patches : ui Lwd.t =
   let$ z = Lwd.get z_patches in
@@ -57,7 +62,7 @@ let current_operation z_patches : ui Lwd.t =
 let current_hunks z_patches : ui Lwd.t =
   let$ z = Lwd.get z_patches in
   let p = Zipper.get_focus z in
-  let hunks = List.map (fun h -> W.string (string_of_hunk h)) p.Patch.hunks in
+  let hunks = List.map (fun h -> W.string (colorize_hunk h)) p.Patch.hunks in
   Ui.vcat @@ hunks
 
 type direction = Prev | Next
@@ -159,20 +164,4 @@ let view (patches : Patch.t list) =
                      Lwd.set quit true;
                      `Handled
                  | `ASCII 'n', [] ->
-                     navigate z_patches Next;
-                     `Handled
-                 | `ASCII 'p', [] ->
-                     navigate z_patches Prev;
-                     `Handled
-                 | `ASCII 'h', [] ->
-                     Lwd.set help true;
-                     `Handled
-                 | _ -> `Unhandled)
-               (W.string
-                  "Type 'h' to go to the help panel, 'q' to quit, 'n' to go to \
-                   the next operation, 'p' to go to the previous operation");
-        ]
-  in
-  W.vbox [ ui ]
-
-let start patch = Ui_loop.run ~quit ~tick_period:0.2 (view patch)
+                     navigate z

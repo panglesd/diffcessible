@@ -1,15 +1,19 @@
 This is a cram test for the new executable.
 
 # Run the executable
-  $ dummy_terminal example.diff n n
-  Operation 3 of 14, 1 hunk
+  $ dummy_terminal example.diff h q
+  Operation 1 of 14, 1 hunk
   1 addition, 1 removal
-  Modification of lib/dune
-  @@ -0,3 +0,3 @@
-    (library
-     (name diffcessible)
-  -  (libraries notty nottui lwd))
-  +  (libraries notty nottui lwd patch))
+  Modification of bin/dune
+  @@ -0,4 +0,4 @@
+    (executable
+     (public_name diffcessible)
+     (name main)
+  -  (libraries diffcessible cmdliner))
+  +  (libraries diffcessible cmdliner patch))
+  
+  
+  
   
   
   

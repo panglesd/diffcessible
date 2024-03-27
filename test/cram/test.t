@@ -17,4 +17,4 @@ This is a cram test for the new executable.
   
   
   
-  Type 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation
+  Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation

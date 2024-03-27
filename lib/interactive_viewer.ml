@@ -194,8 +194,8 @@ let start_test patch events width height =
     | event :: rest ->
         let ui_event = convert_char_to_key event in
         ignore (Renderer.dispatch_key !ui_renderer ui_event);
-        let updated_content = Lwd.quick_sample content_ui_root in
-        ui_renderer := content_image_renderer updated_content width height;
+        Renderer.update !ui_renderer (width, height)
+          (Lwd.quick_sample content_ui_root);
         process_events rest
   in
 

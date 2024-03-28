@@ -110,11 +110,18 @@ let view (patches : Patch.t list) =
     | None -> failwith "zipper_of_list: empty list"
   in
   let curr_scroll_state = Lwd.var W.default_scroll_state in
+  let curr_scroll_state_1 = Lwd.var W.default_scroll_state in
   let change_scroll_state _action state =
-    let off_screen = state.W.position > state.W.bound in
-    if off_screen then
+    let y_off_screen = state.W.position > state.W.bound in
+    if y_off_screen then
       Lwd.set curr_scroll_state { state with position = state.W.bound }
     else Lwd.set curr_scroll_state state
+  in
+  let change_scroll_state_1 _action state =
+    let x_off_screen = state.W.position > state.W.bound in
+    if x_off_screen then
+      Lwd.set curr_scroll_state_1 { state with position = state.W.bound }
+    else Lwd.set curr_scroll_state_1 state
   in
   W.vbox
     [
@@ -124,6 +131,10 @@ let view (patches : Patch.t list) =
       W.vscroll_area
         ~state:(Lwd.get curr_scroll_state)
         ~change:change_scroll_state
+      @@ current_hunks z_patches;
+      W.hscroll_area
+        ~state:(Lwd.get curr_scroll_state_1)
+        ~change:change_scroll_state_1
       @@ current_hunks z_patches;
       Lwd.pure
       @@ Ui.keyboard_area

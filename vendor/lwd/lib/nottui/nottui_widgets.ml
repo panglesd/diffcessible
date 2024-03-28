@@ -141,6 +141,16 @@ let menu_overlay wm g ?(dx=0) ?(dy=0) body around =
 
 let scroll_step = 1
 
+(* type scroll_state = {
+  y_position: int;
+  x_position: int;
+  y_bound : int;
+  x_bound : int;
+  y_visible : int;
+  x_visible : int;
+  y_total : int;
+  x_total : int;
+} *)
 type scroll_state = {
   position: int;
   bound : int;
@@ -148,50 +158,100 @@ type scroll_state = {
   total : int;
 }
 
-let default_scroll_state = { position = 0; bound = 0; visible = 0; total = 0 }
+
+(* let default_scroll_state = { y_position = 0; y_bound = 0; y_visible = 0; y_total = 0; x_position = 0; x_bound = 0; x_visible = 0; x_total = 0; } *)
+let default_scroll_state = { position = 0; bound = 0; visible = 0; total = 0; }
 
 let vscroll_area ~state ~change t =
-  let visible = ref (-1) in
-  let total = ref (-1) in
-  let scroll state delta =
-    let position = state.position + delta in
-    let position = clampi position ~min:0 ~max:state.bound in
-    if position <> state.position then
-      change `Action {state with position};
-    `Handled
+  let y_visible = ref (-1) in
+  let y_total = ref (-1) in
+  let scroll state delta del =
+      let y_position = state.position + delta in
+      let position = clampi y_position ~min:0 ~max:state.bound in
+      if position <> state.position then 
+        change `Action {state with position};
+      `Handled
   in
   let focus_handler state = function
-    (*| `Arrow `Left , _ -> scroll (-scroll_step) 0*)
-    (*| `Arrow `Right, _ -> scroll (+scroll_step) 0*)
-    | `Arrow `Up   , [] -> scroll state (-scroll_step)
-    | `Arrow `Down , [] -> scroll state (+scroll_step)
-    | `Page `Up, [] -> scroll state ((-scroll_step) * 8)
-    | `Page `Down, [] -> scroll state ((+scroll_step) * 8)
+    | `Arrow `Left , [] -> scroll state (0) (-scroll_step) 
+    | `Arrow `Right, [] -> scroll state (0) (+scroll_step) 
+    | `Arrow `Up   , [] -> scroll state (-scroll_step) (0)
+    | `Arrow `Down , [] -> scroll state (+scroll_step) (0)
+    | `Page `Up, [] -> scroll state ((-scroll_step) * 8) (0)
+    | `Page `Down, [] -> scroll state ((+scroll_step) * 8) (0)
     | _ -> `Unhandled
   in
   let scroll_handler state ~x:_ ~y:_ = function
-    | `Scroll `Up   -> scroll state (-scroll_step)
-    | `Scroll `Down -> scroll state (+scroll_step)
+    | `Scroll `Up   -> scroll state (-scroll_step) (0) 
+    | `Scroll `Down -> scroll state (+scroll_step) (0)
+
     | _ -> `Unhandled
   in
   Lwd.map2 t state ~f:begin fun t state ->
     t
     |> Ui.shift_area 0 state.position
     |> Ui.resize ~h:0 ~sh:1
-    |> Ui.size_sensor (fun ~w:_ ~h ->
-        let tchange =
-          if !total <> (Ui.layout_spec t).Ui.h
-          then (total := (Ui.layout_spec t).Ui.h; true)
+    |> Ui.size_sensor (fun ~w ~h ->
+        let tychange =
+          if !y_total <> (Ui.layout_spec t).Ui.h
+          then (y_total := (Ui.layout_spec t).Ui.h; true)
           else false
         in
-        let vchange =
-          if !visible <> h
-          then (visible := h; true)
+        let vychange =
+          if !y_visible <> h
+          then (y_visible := h; true)
           else false
         in
-        if tchange || vchange then
-          change `Content {state with visible = !visible; total = !total;
-                                      bound = maxi 0 (!total - !visible); }
+        if tychange || vychange then
+          change `Content {state with visible = !y_visible; total = !y_total;
+                                      bound = maxi 0 (!y_total - !y_visible);}
+      )
+    |> Ui.mouse_area (scroll_handler state)
+    |> Ui.keyboard_area (focus_handler state)
+  end
+let hscroll_area ~state ~change t =
+  let x_visible = ref (-1) in
+  let x_total = ref (-1) in
+  let scroll state delta del =
+      let x_position = state.position + del in
+      let position = clampi x_position ~min:0 ~max:state.bound in
+      if x_position <> state.position then 
+        change `Action {state with position};
+      `Handled
+  in
+  let focus_handler state = function
+    | `Arrow `Left , [] -> scroll state (0) (-scroll_step) 
+    | `Arrow `Right, [] -> scroll state (0) (+scroll_step) 
+    | `Arrow `Up   , [] -> scroll state (-scroll_step) (0)
+    | `Arrow `Down , [] -> scroll state (+scroll_step) (0)
+    | `Page `Up, [] -> scroll state ((-scroll_step) * 8) (0)
+    | `Page `Down, [] -> scroll state ((+scroll_step) * 8) (0)
+    | _ -> `Unhandled
+  in
+  let scroll_handler state ~x:_ ~y:_ = function
+    | `Scroll `Up   -> scroll state (-scroll_step) (0) 
+    | `Scroll `Down -> scroll state (+scroll_step) (0)
+
+    | _ -> `Unhandled
+  in
+  Lwd.map2 t state ~f:begin fun t state ->
+    t
+    |> Ui.shift_area state.position 0
+    |> Ui.resize ~w:0 ~sw:1
+    |> Ui.size_sensor (fun ~w ~h ->
+        let txchange =
+          if !x_total <> (Ui.layout_spec t).Ui.w
+          then (x_total := (Ui.layout_spec t).Ui.w; true)
+          else false
+        in
+        let vxchange =
+          if !x_visible <> w
+          then (x_visible := w; true)
+          else false
+        in
+        if txchange || vxchange  then
+          change `Content {state with visible = !x_visible; total = !x_total;
+                                      bound = maxi 0 (!x_total - !x_visible);  }
       )
     |> Ui.mouse_area (scroll_handler state)
     |> Ui.keyboard_area (focus_handler state)

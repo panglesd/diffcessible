@@ -31,14 +31,19 @@ val sub_entry : string -> (unit -> unit) -> ui
 
 (* FIXME Explain how scrolling works *)
 val scroll_step : int
-type scroll_state = { position : int; bound : int; visible : int; total : int }
+type scroll_state = { position : int; bound : int; visible : int; total : int; }
 val default_scroll_state : scroll_state
 val vscroll_area :
   state:scroll_state Lwd.t ->
   change:([> `Action | `Content ] -> scroll_state -> unit) ->
   ui Lwd.t -> ui Lwd.t
 
-val scroll_area :
+val hscroll_area :
+  state:scroll_state Lwd.t ->
+  change:([> `Action | `Content ] -> scroll_state -> unit) ->
+  ui Lwd.t -> ui Lwd.t 
+
+ val scroll_area :
   ?offset:int * int -> ui Lwd.t -> ui Lwd.t
 
 val scrollbox: ui Lwd.t -> ui Lwd.t

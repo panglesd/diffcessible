@@ -104,11 +104,6 @@ let change_summary z_patches : ui Lwd.t =
   in
   W.string ~attr:Notty.A.(fg lightcyan) operation_count
 
-let content_image_renderer (ui : ui) (width : int) (height : int) =
-  let renderer = Renderer.make () in
-  Renderer.update renderer (width, height) ui;
-  renderer
-
 let view (patches : Patch.t list) =
   let help_panel =
     Ui.vcat
@@ -181,29 +176,30 @@ let view (patches : Patch.t list) =
   W.vbox [ ui ]
 
 let start patch = Ui_loop.run ~quit ~tick_period:0.2 (view patch)
-let convert_char_to_key (c : char) : Ui.key = (`ASCII c, [])
 
 let start_test patch events width height =
+  let convert_char_to_key (c : char) : Ui.key = (`ASCII c, []) in
   let content_ui_root = Lwd.observe (view patch) in
   let content_ui = Lwd.quick_sample content_ui_root in
-  let ui_renderer = ref (content_image_renderer content_ui width height) in
+  let ui_renderer =
+    let renderer = Renderer.make () in
+    Renderer.update renderer (width, height) content_ui;
+    renderer
+  in
 
   let rec process_events (events : char list) =
     match events with
     | [] -> ()
     | event :: rest ->
         let ui_event = convert_char_to_key event in
-        ignore (Renderer.dispatch_key !ui_renderer ui_event);
-        Renderer.update !ui_renderer (width, height)
+        ignore (Renderer.dispatch_key ui_renderer ui_event);
+        Renderer.update ui_renderer (width, height)
           (Lwd.quick_sample content_ui_root);
         process_events rest
   in
 
   process_events events;
-  let init_image =
-    Renderer.image
-      (content_image_renderer (Lwd.quick_sample content_ui_root) width height)
-  in
+  let init_image = Renderer.image ui_renderer in
   Notty_unix.output_image init_image;
   Lwd.quick_release content_ui_root;
   print_newline ()

@@ -104,6 +104,91 @@ let change_summary z_patches : ui Lwd.t =
   in
   W.string ~attr:Notty.A.(fg lightcyan) operation_count
 
+(** Side by side diff view implementation **)
+
+type view_mode = SideBySide | Normal
+
+let view_mode = Lwd.var Normal
+
+let toggle_view_mode () =
+  match Lwd.peek view_mode with
+  | Normal -> Lwd.set view_mode SideBySide
+  | SideBySide -> Lwd.set view_mode Normal
+
+let rec split_and_align_hunk hunks mine_acc their_acc =
+  match hunks with
+  | [] -> (List.rev mine_acc, List.rev their_acc)
+  | (`Common _ as common) :: t ->
+      split_and_align_hunk t (common :: mine_acc) (common :: their_acc)
+  | `Mine s :: `Their s' :: t ->
+      split_and_align_hunk t (`Mine s :: mine_acc) (`Their s' :: their_acc)
+  | `Mine s :: t ->
+      split_and_align_hunk t (`Mine s :: mine_acc) (`Common "" :: their_acc)
+  | `Their s :: t ->
+      split_and_align_hunk t (`Common "" :: mine_acc) (`Their s :: their_acc)
+
+let wrap_text max_width s =
+  let rec aux acc curr line =
+    if String.length line <= max_width then List.rev (line :: acc)
+    else
+      let split_index =
+        try String.rindex_from line (max_width - 1) ' '
+        with Not_found -> max_width
+      in
+      let before = String.sub line 0 split_index in
+      let after =
+        String.sub line (split_index + 1) (String.length line - split_index - 1)
+      in
+      aux (before :: acc) (curr + 1) after
+  in
+  aux [] 0 s
+
+let lines_to_ui lines attr_line_number attr_change max_width =
+  List.flatten
+    (List.map
+       (fun line ->
+         let content, attr =
+           match line with
+           | `Common s -> (s, attr_line_number)
+           | `Mine s -> (s, attr_change)
+           | `Their s -> (s, attr_change)
+         in
+         let wrapped_lines = wrap_text max_width content in
+         List.map
+           (fun l -> W.string ~attr (Printf.sprintf "  %s" l))
+           wrapped_lines)
+       lines)
+
+let ui_of_hunk_side_by_side hunk max_width =
+  let mine_lines, their_lines = split_and_align_hunk hunk.Patch.lines [] [] in
+
+  let attr_line_number = Notty.A.(fg lightblue) in
+  let attr_mine = Notty.A.(fg red ++ st bold) in
+  let attr_their = Notty.A.(fg green ++ st bold) in
+
+  let mine_ui = lines_to_ui mine_lines attr_line_number attr_mine max_width in
+  let their_ui =
+    lines_to_ui their_lines attr_line_number attr_their max_width
+  in
+
+  let space = Ui.space 1 0 in
+  Ui.hcat
+    [
+      Ui.resize ~sw:1 (Ui.vcat mine_ui);
+      space;
+      Ui.resize ~sw:1 (Ui.vcat their_ui);
+    ]
+
+let current_hunks_side_by_side z_patches max_width : ui Lwd.t =
+  let$ z = Lwd.get z_patches in
+  let p = Zipper.get_focus z in
+  let hunks_ui =
+    List.map (fun h -> ui_of_hunk_side_by_side h max_width) p.Patch.hunks
+  in
+  Ui.vcat @@ hunks_ui
+
+(** end of side by side diff view implementation **)
+
 let view (patches : Patch.t list) =
   let help_panel =
     Ui.vcat
@@ -119,6 +204,13 @@ let view (patches : Patch.t list) =
     match Zipper.zipper_of_list patches with
     | Some z -> Lwd.var z
     | None -> failwith "zipper_of_list: empty list"
+  in
+  let max_width = 80 in
+  let hunks_ui =
+    Lwd.bind (Lwd.get view_mode) ~f:(fun mode ->
+        match mode with
+        | Normal -> current_hunks z_patches
+        | SideBySide -> current_hunks_side_by_side z_patches max_width)
   in
   let curr_scroll_state = Lwd.var W.default_scroll_state in
   let change_scroll_state _action state =
@@ -150,8 +242,7 @@ let view (patches : Patch.t list) =
           current_operation z_patches;
           W.vscroll_area
             ~state:(Lwd.get curr_scroll_state)
-            ~change:change_scroll_state
-          @@ current_hunks z_patches;
+            ~change:change_scroll_state hunks_ui;
           Lwd.pure
           @@ Ui.keyboard_area
                (function
@@ -167,10 +258,14 @@ let view (patches : Patch.t list) =
                  | `ASCII 'h', [] ->
                      Lwd.set help true;
                      `Handled
+                 | `ASCII 't', [] ->
+                     toggle_view_mode ();
+                     `Handled
                  | _ -> `Unhandled)
                (W.string
                   "Type 'h' to go to the help panel, 'q' to quit, 'n' to go to \
-                   the next operation, 'p' to go to the previous operation");
+                   the next operation, 'p' to go to the previous operation. \
+                   Press 't' to toggle view mode.");
         ]
   in
   W.vbox [ ui ]

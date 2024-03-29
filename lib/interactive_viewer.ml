@@ -113,6 +113,7 @@ let view (patches : Patch.t list) =
         W.string "q:   Quit the diffcessible viewer";
         W.string "n:   Move to the next operation, if present";
         W.string "p:   Move to the previous operation, if present";
+        W.string "g:   Scroll back to the top of the displayed operation.";
       ]
   in
   let z_patches : 'a Zipper.t Lwd.var =
@@ -166,6 +167,10 @@ let view (patches : Patch.t list) =
                      `Handled
                  | `ASCII 'h', [] ->
                      Lwd.set help true;
+                     `Handled
+                 | `ASCII 'g', [] ->
+                     Lwd.set curr_scroll_state
+                       { (Lwd.peek curr_scroll_state) with W.position = 0 };
                      `Handled
                  | _ -> `Unhandled)
                (W.string

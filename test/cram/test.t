@@ -71,7 +71,7 @@ This is a cram test for the new executable.
   q:   Quit the diffcessible viewer
   n:   Move to the next operation, if present
   p:   Move to the previous operation, if present
-  t:   Scroll back to the top of the displayed operation.
+  g:   Scroll back to the top of the displayed operation.
   
   
   

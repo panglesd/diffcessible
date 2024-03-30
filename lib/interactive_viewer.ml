@@ -69,6 +69,7 @@ let navigate z_patches (dir : direction) : unit =
   | Next -> Lwd.set z_patches (Zipper.next z)
 
 let quit = Lwd.var false
+let help = Lwd.var false
 
 let additions_and_removals lines =
   let add_line (additions, removals) line =
@@ -104,6 +105,17 @@ let change_summary z_patches : ui Lwd.t =
   W.string ~attr:Notty.A.(fg lightcyan) operation_count
 
 let view (patches : Patch.t list) =
+  let help_panel =
+    Ui.vcat
+      [
+        W.string "Help Panel:\n";
+        W.string "h:   Open the help panel";
+        W.string "q:   Quit the diffcessible viewer";
+        W.string "n:   Move to the next operation, if present";
+        W.string "p:   Move to the previous operation, if present";
+        W.string "g:   Scroll back to the top of the displayed operation.";
+      ]
+  in
   let z_patches : 'a Zipper.t Lwd.var =
     match Zipper.zipper_of_list patches with
     | Some z -> Lwd.var z
@@ -116,31 +128,83 @@ let view (patches : Patch.t list) =
       Lwd.set curr_scroll_state { state with position = state.W.bound }
     else Lwd.set curr_scroll_state state
   in
-  W.vbox
-    [
-      operation_info z_patches;
-      change_summary z_patches;
-      current_operation z_patches;
-      W.vscroll_area
-        ~state:(Lwd.get curr_scroll_state)
-        ~change:change_scroll_state
-      @@ current_hunks z_patches;
-      Lwd.pure
-      @@ Ui.keyboard_area
-           (function
-             | `ASCII 'q', [] ->
-                 Lwd.set quit true;
-                 `Handled
-             | `ASCII 'n', [] ->
-                 navigate z_patches Next;
-                 `Handled
-             | `ASCII 'p', [] ->
-                 navigate z_patches Prev;
-                 `Handled
-             | _ -> `Unhandled)
-           (W.string
-              "Type 'q' to quit, 'n' to go to the next operation, 'p' to go to \
-               the previous operation");
-    ]
+  let ui =
+    let$* help_visible = Lwd.get help in
+    if help_visible then
+      W.vbox
+        [
+          W.scrollbox @@ Lwd.pure @@ help_panel;
+          Lwd.pure
+          @@ Ui.keyboard_area
+               (function
+                 | `ASCII 'q', [] ->
+                     Lwd.set help false;
+                     `Handled
+                 | _ -> `Unhandled)
+               (W.string "Type 'q' to exit the help panel");
+        ]
+    else
+      W.vbox
+        [
+          operation_info z_patches;
+          change_summary z_patches;
+          current_operation z_patches;
+          W.vscroll_area
+            ~state:(Lwd.get curr_scroll_state)
+            ~change:change_scroll_state
+          @@ current_hunks z_patches;
+          Lwd.pure
+          @@ Ui.keyboard_area
+               (function
+                 | `ASCII 'q', [] ->
+                     Lwd.set quit true;
+                     `Handled
+                 | `ASCII 'n', [] ->
+                     navigate z_patches Next;
+                     `Handled
+                 | `ASCII 'p', [] ->
+                     navigate z_patches Prev;
+                     `Handled
+                 | `ASCII 'h', [] ->
+                     Lwd.set help true;
+                     `Handled
+                 | `ASCII 'g', [] ->
+                     Lwd.set curr_scroll_state
+                       { (Lwd.peek curr_scroll_state) with W.position = 0 };
+                     `Handled
+                 | _ -> `Unhandled)
+               (W.string
+                  "Type 'h' to go to the help panel, 'q' to quit, 'n' to go to \
+                   the next operation, 'p' to go to the previous operation");
+        ]
+  in
+  W.vbox [ ui ]
 
 let start patch = Ui_loop.run ~quit ~tick_period:0.2 (view patch)
+
+let start_test patch events width height =
+  let convert_char_to_key (c : char) : Ui.key = (`ASCII c, []) in
+  let content_ui_root = Lwd.observe (view patch) in
+  let content_ui = Lwd.quick_sample content_ui_root in
+  let ui_renderer =
+    let renderer = Renderer.make () in
+    Renderer.update renderer (width, height) content_ui;
+    renderer
+  in
+
+  let rec process_events (events : char list) =
+    match events with
+    | [] -> ()
+    | event :: rest ->
+        let ui_event = convert_char_to_key event in
+        ignore (Renderer.dispatch_key ui_renderer ui_event);
+        Renderer.update ui_renderer (width, height)
+          (Lwd.quick_sample content_ui_root);
+        process_events rest
+  in
+
+  process_events events;
+  let init_image = Renderer.image ui_renderer in
+  Notty_unix.output_image init_image;
+  Lwd.quick_release content_ui_root;
+  print_newline ()

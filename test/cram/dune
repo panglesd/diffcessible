@@ -1,0 +1,11 @@
+(executable
+ (name interactive_viewer_dummy)
+ (libraries diffcessible cmdliner notty nottui lwd))
+
+(env
+ (_
+  (binaries
+   (./interactive_viewer_dummy.exe as dummy_terminal))))
+
+(cram
+ (deps %{bin:dummy_terminal} ./example.diff))

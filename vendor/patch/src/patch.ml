@@ -64,13 +64,13 @@ let unified_diff hunk =
          | `Common line -> 
             incr left_line_num; 
             incr right_line_num;
-            (Printf.sprintf "%d " !left_line_num) ^ (Printf.sprintf "%d   " !right_line_num) ^ line
+            (Printf.sprintf "%2d %2d   %s" !left_line_num !right_line_num line) 
          | `Their line -> 
             incr right_line_num;
-            "  " ^ (Printf.sprintf "%d + " !right_line_num) ^ line
+            (Printf.sprintf "   %2d + %s" !right_line_num line)
          | `Mine line ->
             incr left_line_num;
-            (Printf.sprintf "%d   - " !left_line_num) ^ line)
+            (Printf.sprintf "%2d    - %s" !left_line_num line))
        hunk.lines)
 
 let pp_hunk ppf hunk =

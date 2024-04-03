@@ -75,7 +75,8 @@ let unified_diff hunk =
 
 let pp_hunk ppf hunk =
   Format.fprintf ppf "@@@@ -%d,%d +%d,%d @@@@\n%s"
-    (hunk.mine_start+1) hunk.mine_len (hunk.their_start+1) hunk.their_len
+    (if hunk.mine_len = 0 then 0 else hunk.mine_start+1) hunk.mine_len 
+    (if hunk.their_len = 0 then 0 else hunk.their_start+1) hunk.their_len
     (unified_diff hunk)
 
 let take data num =

@@ -52,25 +52,22 @@ type hunk = {
 }
 
 let unified_diff hunk =
-  let left_line_num = ref hunk.their_start in 
-  let right_line_num = ref hunk.mine_start in
-  let incr ref = 
-    ref := !ref + 1 
-  in
+  let their_line_num = ref hunk.their_start in 
+  let mine_line_num = ref hunk.mine_start in
   (* TODO *)
   String.concat "\n"
     (List.map
        (function
          | `Common line -> 
-            incr left_line_num; 
-            incr right_line_num;
-            (Printf.sprintf "%2d %2d   %s" !left_line_num !right_line_num line) 
+            incr their_line_num; 
+            incr mine_line_num;
+            (Printf.sprintf "%2d %2d   %s" !mine_line_num !their_line_num line) 
          | `Their line -> 
-            incr right_line_num;
-            (Printf.sprintf "   %2d + %s" !right_line_num line)
+            incr their_line_num;
+            (Printf.sprintf "   %2d + %s" !their_line_num line)
          | `Mine line ->
-            incr left_line_num;
-            (Printf.sprintf "%2d    - %s" !left_line_num line))
+            incr mine_line_num;
+            (Printf.sprintf "%2d    - %s" !mine_line_num line))
        hunk.lines)
 
 let pp_hunk ppf hunk =

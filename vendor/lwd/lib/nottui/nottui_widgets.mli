@@ -37,6 +37,10 @@ val vscroll_area :
   state:scroll_state Lwd.t ->
   change:([> `Action | `Content ] -> scroll_state -> unit) ->
   ui Lwd.t -> ui Lwd.t
+val hscroll_area :
+  state:scroll_state Lwd.t ->
+  change:([> `Action | `Content ] -> scroll_state -> unit) ->
+  ui Lwd.t -> ui Lwd.t
 
 val scroll_area :
   ?offset:int * int -> ui Lwd.t -> ui Lwd.t

@@ -85,3 +85,45 @@ This is a cram test for the new executable.
   
   
   Type 'q' to exit the help panel
+  $ dummy_terminal more-examples.diff h q
+  Operation 1 of 2, 1 hunk
+  2 additions, 1 removal
+  Modification of file.txt
+  @@ -2,1 +2,2 @@
+   2    - Hi everyone!
+      2 + Hello World!
+      3 + This is the diffcessible project.
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation
+  $ dummy_terminal more-examples.diff n
+  Operation 2 of 2, 1 hunk
+  2 additions, 1 removal
+  Modification of file.txt
+  @@ -3,1 +5,2 @@
+   3    - This file starts at line 3.
+      5 + This file starts at line 5.
+      6 + This is the second test case in this file.
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation

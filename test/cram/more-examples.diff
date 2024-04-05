@@ -1,0 +1,16 @@
+diff --git a/file.txt b/file.txt
+index e03c4a4..cb71f31 100644
+--- a/file.txt
++++ b/file.txt
+@@ -2,1 +2,2 @@ 
+-Hi everyone!
++Hello World!
++This is the diffcessible project.
+diff --git a/file.txt b/file.txt
+index 57b873d..68cebdf 100644
+--- a/file.txt
++++ b/file.txt
+@@ -3,1 +5,2 @@ 
+-This file starts at line 3.
++This file starts at line 5.
++This is the second test case in this file.

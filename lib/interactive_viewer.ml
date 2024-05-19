@@ -167,10 +167,31 @@ let view (patches : Patch.t list) =
                  | `ASCII 'h', [] ->
                      Lwd.set help true;
                      `Handled
+                 | `ASCII 'g', [] ->
+                     Lwd.set curr_scroll_state
+                       { (Lwd.peek curr_scroll_state) with W.position = 0 };
+                     `Handled
+                 | `ASCII 'j', [] ->
+                     let current_state = Lwd.peek curr_scroll_state in
+                     Lwd.set curr_scroll_state
+                       {
+                         current_state with
+                         W.position = current_state.W.position + 1;
+                       };
+                     `Handled
+                 | `ASCII 'k', [] ->
+                     let current_state = Lwd.peek curr_scroll_state in
+                     Lwd.set curr_scroll_state
+                       {
+                         current_state with
+                         W.position = max 0 (current_state.W.position - 1);
+                       };
+                     `Handled
                  | _ -> `Unhandled)
                (W.string
                   "Type 'h' to go to the help panel, 'q' to quit, 'n' to go to \
-                   the next operation, 'p' to go to the previous operation");
+                   the next operation, 'p' to go to the previous operation, \
+                   'j' to scroll down, 'k' to scroll up");
         ]
   in
   W.vbox [ ui ]

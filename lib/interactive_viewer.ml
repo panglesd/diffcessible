@@ -113,6 +113,7 @@ let view (patches : Patch.t list) =
         W.string "q:   Quit the diffcessible viewer";
         W.string "n:   Move to the next operation, if present";
         W.string "p:   Move to the previous operation, if present";
+        W.string "g:   Scroll back to the top of the displayed operation.";
       ]
   in
   let z_patches : 'a Zipper.t Lwd.var =
@@ -197,3 +198,30 @@ let view (patches : Patch.t list) =
   W.vbox [ ui ]
 
 let start patch = Ui_loop.run ~quit ~tick_period:0.2 (view patch)
+
+let start_test patch events width height =
+  let convert_char_to_key (c : char) : Ui.key = (`ASCII c, []) in
+  let content_ui_root = Lwd.observe (view patch) in
+  let content_ui = Lwd.quick_sample content_ui_root in
+  let ui_renderer =
+    let renderer = Renderer.make () in
+    Renderer.update renderer (width, height) content_ui;
+    renderer
+  in
+
+  let rec process_events (events : char list) =
+    match events with
+    | [] -> ()
+    | event :: rest ->
+        let ui_event = convert_char_to_key event in
+        ignore (Renderer.dispatch_key ui_renderer ui_event);
+        Renderer.update ui_renderer (width, height)
+          (Lwd.quick_sample content_ui_root);
+        process_events rest
+  in
+
+  process_events events;
+  let init_image = Renderer.image ui_renderer in
+  Notty_unix.output_image init_image;
+  Lwd.quick_release content_ui_root;
+  print_newline ()

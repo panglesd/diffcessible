@@ -52,18 +52,28 @@ type hunk = {
 }
 
 let unified_diff hunk =
+  let their_line_num = ref hunk.their_start in 
+  let mine_line_num = ref hunk.mine_start in
   (* TODO *)
   String.concat "\n"
     (List.map
        (function
-         | `Common line -> "  " ^ line
-         | `Mine line -> "- " ^ line
-         | `Their line -> "+ " ^ line)
+         | `Common line -> 
+            incr their_line_num; 
+            incr mine_line_num;
+            (Printf.sprintf "%2d %2d   %s" !mine_line_num !their_line_num line) 
+         | `Their line -> 
+            incr their_line_num;
+            (Printf.sprintf "   %2d + %s" !their_line_num line)
+         | `Mine line ->
+            incr mine_line_num;
+            (Printf.sprintf "%2d    - %s" !mine_line_num line))
        hunk.lines)
 
 let pp_hunk ppf hunk =
   Format.fprintf ppf "@@@@ -%d,%d +%d,%d @@@@\n%s"
-    hunk.mine_start hunk.mine_len hunk.their_start hunk.their_len
+    (if hunk.mine_len = 0 then 0 else hunk.mine_start+1) hunk.mine_len 
+    (if hunk.their_len = 0 then 0 else hunk.their_start+1) hunk.their_len
     (unified_diff hunk)
 
 let take data num =

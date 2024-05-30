@@ -196,6 +196,48 @@ let vscroll_area ~state ~change t =
     |> Ui.mouse_area (scroll_handler state)
     |> Ui.keyboard_area (focus_handler state)
   end
+let hscroll_area ~state ~change t =
+  let visible = ref (-1) in
+  let total = ref (-1) in
+  let scroll state delta =
+      let position = state.position + delta in
+      let position = clampi position ~min:0 ~max:state.bound in
+      if position <> state.position then 
+        change `Action {state with position};
+      `Handled
+  in
+  let focus_handler state = function
+  | `Arrow `Left , [] -> scroll state (-scroll_step) 
+  | `Arrow `Right, [] -> scroll state (+scroll_step) 
+  | _ -> `Unhandled
+  in
+  (* let scroll_handler state ~x:_ ~y:_ = function
+    | `Scroll `Up   -> scroll state (0)
+    | `Scroll `Down -> scroll state (0)
+    | _ -> `Unhandled
+  in *)
+  Lwd.map2 t state ~f:begin fun t state ->
+    t
+    |> Ui.shift_area state.position 0
+    |> Ui.resize ~w:0 ~sw:1
+    |> Ui.size_sensor (fun ~w ~h:_ ->
+        let tchange =
+          if !total <> (Ui.layout_spec t).Ui.w 
+            then (total := (Ui.layout_spec t).Ui.w; true)
+          else false
+        in
+        let vchange =
+          if !visible <> w 
+            then (visible := w; true)
+          else false
+        in
+        if tchange || vchange then
+          change `Content {state with visible = !visible; total = !total;
+                                      bound = maxi 0 (!total - !visible); }
+      )
+    (* |> Ui.mouse_area (scroll_handler state) *)
+    |> Ui.keyboard_area (focus_handler state)
+  end
 
 let scroll_area ?(offset=0,0) t =
   let offset = Lwd.var offset in

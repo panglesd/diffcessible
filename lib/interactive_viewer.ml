@@ -47,7 +47,7 @@ let ui_of_operation operation =
       Ui.hcat
         [ W.string "Modification of "; W.string ~attr:blue_bold_attr path ]
 
-let string_of_hunk hunk =
+let ui_of_hunk hunk =
   let line_to_string line =
     match line with
     | `Their text -> W.string ~attr:Notty.A.(fg red) text
@@ -64,7 +64,7 @@ let current_operation z_patches : ui Lwd.t =
 let current_hunks z_patches : ui Lwd.t =
   let$ z = Lwd.get z_patches in
   let p = Zipper.get_focus z in
-  let hunks = List.map string_of_hunk p.Patch.hunks in
+  let hunks = List.map ui_of_hunk p.Patch.hunks in
   Ui.vcat hunks
 
 type direction = Prev | Next

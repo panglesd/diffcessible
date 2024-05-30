@@ -47,7 +47,14 @@ let ui_of_operation operation =
       Ui.hcat
         [ W.string "Modification of "; W.string ~attr:blue_bold_attr path ]
 
-let string_of_hunk = Format.asprintf "%a" Patch.pp_hunk
+let ui_of_hunk hunk =
+  let line_to_string line =
+    match line with
+    | `Their text -> W.string ~attr:Notty.A.(fg red) text
+    | `Mine text -> W.string ~attr:Notty.A.(fg green) text
+    | `Common text -> W.string text
+  in
+  Ui.vcat @@ List.map line_to_string hunk.Patch.lines
 
 let current_operation z_patches : ui Lwd.t =
   let$ z = Lwd.get z_patches in
@@ -57,8 +64,8 @@ let current_operation z_patches : ui Lwd.t =
 let current_hunks z_patches : ui Lwd.t =
   let$ z = Lwd.get z_patches in
   let p = Zipper.get_focus z in
-  let hunks = List.map (fun h -> W.string (string_of_hunk h)) p.Patch.hunks in
-  Ui.vcat @@ hunks
+  let hunks = List.map ui_of_hunk p.Patch.hunks in
+  Ui.vcat hunks
 
 type direction = Prev | Next
 

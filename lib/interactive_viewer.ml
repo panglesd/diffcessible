@@ -47,7 +47,14 @@ let ui_of_operation operation =
       Ui.hcat
         [ W.string "Modification of "; W.string ~attr:blue_bold_attr path ]
 
-let string_of_hunk = Format.asprintf "%a" Patch.pp_hunk
+let ui_of_hunk hunk =
+  let line_to_string line =
+    match line with
+    | `Their text -> W.string ~attr:Notty.A.(fg red) text
+    | `Mine text -> W.string ~attr:Notty.A.(fg green) text
+    | `Common text -> W.string text
+  in
+  Ui.vcat @@ List.map line_to_string hunk.Patch.lines
 
 let current_operation z_patches : ui Lwd.t =
   let$ z = Lwd.get z_patches in
@@ -57,8 +64,8 @@ let current_operation z_patches : ui Lwd.t =
 let current_hunks z_patches : ui Lwd.t =
   let$ z = Lwd.get z_patches in
   let p = Zipper.get_focus z in
-  let hunks = List.map (fun h -> W.string (string_of_hunk h)) p.Patch.hunks in
-  Ui.vcat @@ hunks
+  let hunks = List.map ui_of_hunk p.Patch.hunks in
+  Ui.vcat hunks
 
 type direction = Prev | Next
 
@@ -203,6 +210,7 @@ let view (patches : Patch.t list) =
         W.string "q:   Quit the diffcessible viewer";
         W.string "n:   Move to the next operation, if present";
         W.string "p:   Move to the previous operation, if present";
+        W.string "g:   Scroll back to the top of the displayed operation.";
       ]
   in
   let z_patches : 'a Zipper.t Lwd.var =
@@ -266,6 +274,9 @@ let view (patches : Patch.t list) =
                      `Handled
                  | `ASCII 't', [] ->
                      toggle_view_mode ();
+                 | `ASCII 'g', [] ->
+                     Lwd.set curr_scroll_state
+                       { (Lwd.peek curr_scroll_state) with W.position = 0 };
                      `Handled
                  | _ -> `Unhandled)
                (W.string
@@ -302,3 +313,30 @@ let initialize_terminal_width () =
 let start patch =
   initialize_terminal_width ();
   Ui_loop.run ~quit ~tick_period:0.2 (view patch)
+
+let start_test patch events width height =
+  let convert_char_to_key (c : char) : Ui.key = (`ASCII c, []) in
+  let content_ui_root = Lwd.observe (view patch) in
+  let content_ui = Lwd.quick_sample content_ui_root in
+  let ui_renderer =
+    let renderer = Renderer.make () in
+    Renderer.update renderer (width, height) content_ui;
+    renderer
+  in
+
+  let rec process_events (events : char list) =
+    match events with
+    | [] -> ()
+    | event :: rest ->
+        let ui_event = convert_char_to_key event in
+        ignore (Renderer.dispatch_key ui_renderer ui_event);
+        Renderer.update ui_renderer (width, height)
+          (Lwd.quick_sample content_ui_root);
+        process_events rest
+  in
+
+  process_events events;
+  let init_image = Renderer.image ui_renderer in
+  Notty_unix.output_image init_image;
+  Lwd.quick_release content_ui_root;
+  print_newline ()

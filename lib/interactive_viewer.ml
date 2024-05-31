@@ -127,6 +127,7 @@ let rec split_and_align_hunk hunks mine_acc their_acc =
   | `Their s :: t ->
       split_and_align_hunk t (`Common "" :: mine_acc) (`Their s :: their_acc)
 
+(* Function to wrap text to the specified width with consistent spacing *)
 let wrap_text max_width s =
   let rec aux acc curr line =
     if String.length line <= max_width then List.rev (line :: acc)
@@ -143,6 +144,7 @@ let wrap_text max_width s =
   in
   aux [] 0 s
 
+(* Function to convert line diffs to UI elements with consistent alignment *)
 let lines_to_ui lines attr_line_number attr_change max_width =
   List.flatten
     (List.map
@@ -155,10 +157,11 @@ let lines_to_ui lines attr_line_number attr_change max_width =
          in
          let wrapped_lines = wrap_text max_width content in
          List.map
-           (fun l -> W.string ~attr (Printf.sprintf "  %s" l))
+           (fun l -> W.string ~attr (Printf.sprintf "%-*s" max_width l))
            wrapped_lines)
        lines)
 
+(* Function to create side-by-side UI from a hunk *)
 let ui_of_hunk_side_by_side hunk max_width =
   let mine_lines, their_lines = split_and_align_hunk hunk.Patch.lines [] [] in
 
@@ -189,6 +192,8 @@ let current_hunks_side_by_side z_patches max_width : ui Lwd.t =
 
 (** end of side by side diff view implementation **)
 
+let dynamic_width = ref 80
+
 let view (patches : Patch.t list) =
   let help_panel =
     Ui.vcat
@@ -205,7 +210,8 @@ let view (patches : Patch.t list) =
     | Some z -> Lwd.var z
     | None -> failwith "zipper_of_list: empty list"
   in
-  let max_width = 80 in
+  (* Use the mutable width variable here *)
+  let max_width = !dynamic_width in
   let hunks_ui =
     Lwd.bind (Lwd.get view_mode) ~f:(fun mode ->
         match mode with
@@ -270,4 +276,29 @@ let view (patches : Patch.t list) =
   in
   W.vbox [ ui ]
 
-let start patch = Ui_loop.run ~quit ~tick_period:0.2 (view patch)
+let update_width new_width = dynamic_width := new_width
+
+let get_terminal_width_unix () =
+  let ic, oc, ec = Unix.open_process_full "tput cols" (Unix.environment ()) in
+  let width = input_line ic in
+  let _ = Unix.close_process_full (ic, oc, ec) in
+  int_of_string width
+
+let get_terminal_width_windows () =
+  (* maybe use this https://github.com/cryptosense/terminal_size ? *)
+  80
+
+let initialize_terminal_width () =
+  try
+    let width =
+      match Sys.os_type with
+      | "Unix" | "Cygwin" -> get_terminal_width_unix ()
+      | "Win32" -> get_terminal_width_windows ()
+      | _ -> raise Not_found
+    in
+    update_width width
+  with _ -> update_width 80
+
+let start patch =
+  initialize_terminal_width ();
+  Ui_loop.run ~quit ~tick_period:0.2 (view patch)

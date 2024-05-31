@@ -274,9 +274,6 @@ let view (patches : Patch.t list) =
                      `Handled
                  | `ASCII 't', [] ->
                      toggle_view_mode ();
-                 | `ASCII 'g', [] ->
-                     Lwd.set curr_scroll_state
-                       { (Lwd.peek curr_scroll_state) with W.position = 0 };
                      `Handled
                  | _ -> `Unhandled)
                (W.string
@@ -285,6 +282,7 @@ let view (patches : Patch.t list) =
                    Press 't' to toggle view mode.");
         ]
   in
+
   W.vbox [ ui ]
 
 let update_width new_width = dynamic_width := new_width

@@ -47,7 +47,24 @@ let ui_of_operation operation =
       Ui.hcat
         [ W.string "Modification of "; W.string ~attr:blue_bold_attr path ]
 
-let string_of_hunk = Format.asprintf "%a" Patch.pp_hunk
+let line_numbers_visible = Lwd.var false
+
+(* let toggle_line_numbers () = *)
+(*   let current = Lwd.peek line_numbers_visible in *)
+(*   Lwd.set line_numbers_visible (not current) *)
+
+let ui_of_hunk hunk =
+  let line_to_string i line =
+    let line_number =
+      if Lwd.peek line_numbers_visible then Printf.sprintf "%4d " (i + 1)
+      else ""
+    in
+    match line with
+    | `Their text -> W.string ~attr:Notty.A.(fg red) (line_number ^ text)
+    | `Mine text -> W.string ~attr:Notty.A.(fg green) (line_number ^ text)
+    | `Common text -> W.string (line_number ^ text)
+  in
+  Ui.vcat @@ List.mapi line_to_string hunk.Patch.lines
 
 let current_operation z_patches : ui Lwd.t =
   let$ z = Lwd.get z_patches in
@@ -57,8 +74,8 @@ let current_operation z_patches : ui Lwd.t =
 let current_hunks z_patches : ui Lwd.t =
   let$ z = Lwd.get z_patches in
   let p = Zipper.get_focus z in
-  let hunks = List.map (fun h -> W.string (string_of_hunk h)) p.Patch.hunks in
-  Ui.vcat @@ hunks
+  let hunks = List.map ui_of_hunk p.Patch.hunks in
+  Ui.vcat hunks
 
 type direction = Prev | Next
 

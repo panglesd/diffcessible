@@ -47,24 +47,7 @@ let ui_of_operation operation =
       Ui.hcat
         [ W.string "Modification of "; W.string ~attr:blue_bold_attr path ]
 
-let line_numbers_visible = Lwd.var false
-
-let toggle_line_numbers () =
-  let current = Lwd.peek line_numbers_visible in
-  Lwd.set line_numbers_visible (not current)
-
-let ui_of_hunk hunk =
-  let line_to_string i line =
-    let line_number =
-      if Lwd.peek line_numbers_visible then Printf.sprintf "%4d " (i + 1)
-      else ""
-    in
-    match line with
-    | `Their text -> W.string ~attr:Notty.A.(fg red) (line_number ^ text)
-    | `Mine text -> W.string ~attr:Notty.A.(fg green) (line_number ^ text)
-    | `Common text -> W.string (line_number ^ text)
-  in
-  Ui.vcat @@ List.mapi line_to_string hunk.Patch.lines
+let string_of_hunk = Format.asprintf "%a" Patch.pp_hunk
 
 let current_operation z_patches : ui Lwd.t =
   let$ z = Lwd.get z_patches in
@@ -74,8 +57,8 @@ let current_operation z_patches : ui Lwd.t =
 let current_hunks z_patches : ui Lwd.t =
   let$ z = Lwd.get z_patches in
   let p = Zipper.get_focus z in
-  let hunks = List.map ui_of_hunk p.Patch.hunks in
-  Ui.vcat hunks
+  let hunks = List.map (fun h -> W.string (string_of_hunk h)) p.Patch.hunks in
+  Ui.vcat @@ hunks
 
 type direction = Prev | Next
 
@@ -144,28 +127,42 @@ let rec split_and_align_hunk hunks mine_acc their_acc =
   | `Their s :: t ->
       split_and_align_hunk t (`Common "" :: mine_acc) (`Their s :: their_acc)
 
-(* Function to wrap text to the specified width with consistent spacing *)
-let wrap_text max_width s =
+let wrap_text s =
   let rec aux acc line =
-    if String.length line <= max_width then List.rev (line :: acc)
+    if String.length line <= 0 then List.rev acc
     else
-      let split_index =
-        try String.rindex_from line (max_width - 1) ' '
-        with Not_found -> max_width
-      in
-      let before = String.sub line 0 split_index in
-      let after =
-        String.sub line (split_index + 1) (String.length line - split_index - 1)
+      let before, after =
+        if String.length line <= 40 then (line, "")
+        else
+          let split_index =
+            try String.rindex_from line 40 ' ' with Not_found -> 40
+          in
+          ( String.sub line 0 split_index,
+            String.sub line (split_index + 1)
+              (String.length line - split_index - 1) )
       in
       aux (before :: acc) after
   in
   aux [] s
 
-(* Function to convert line diffs to UI elements with consistent alignment and continuous line numbering, updated to handle line wraps *)
-let lines_to_ui lines attr_line_number attr_change max_width
-    starting_line_number =
-  let line_number_ref = ref starting_line_number in
-  (* Use a reference to track the line number *)
+let max_segment_width hunks =
+  let rec aux max_width lines =
+    match lines with
+    | [] -> max_width
+    | (`Common s | `Mine s | `Their s) :: rest ->
+        let width = String.length s in
+        aux (max max_width width) rest
+  in
+  List.fold_left
+    (fun acc hunk ->
+      let mine_lines, their_lines =
+        split_and_align_hunk hunk.Patch.lines [] []
+      in
+      let lines = List.concat [ mine_lines; their_lines ] in
+      aux acc lines)
+    0 hunks
+
+let lines_to_ui lines max_width attr_line_number attr_change =
   List.flatten
     (List.map
        (fun line ->
@@ -175,78 +172,45 @@ let lines_to_ui lines attr_line_number attr_change max_width
            | `Mine s -> (s, attr_change)
            | `Their s -> (s, attr_change)
          in
-         let wrapped_lines = wrap_text max_width content in
-         (* Generate UI for each wrapped line, incrementing the line number for each *)
+         let padded_content =
+           content ^ String.make (max_width - String.length content) ' '
+         in
+         let wrapped_lines = wrap_text padded_content in
          List.map
-           (fun wrapped_line ->
-             let line_number_str =
-               if Lwd.peek line_numbers_visible then
-                 Printf.sprintf "%4d " !line_number_ref
-               else ""
-             in
-             let ui = W.string ~attr (line_number_str ^ wrapped_line) in
-             incr line_number_ref;
-             (* Increment line number for each new line *)
-             ui)
+           (fun l -> W.string ~attr (Printf.sprintf "  %s" l))
            wrapped_lines)
        lines)
 
-(* Function to create side-by-side UI from a hunk, updated with continuous line numbering *)
-let ui_of_hunk_side_by_side hunk max_width starting_line_number =
+let ui_of_hunk_side_by_side hunk max_width =
   let mine_lines, their_lines = split_and_align_hunk hunk.Patch.lines [] [] in
 
   let attr_line_number = Notty.A.(fg lightblue) in
   let attr_mine = Notty.A.(fg red ++ st bold) in
   let attr_their = Notty.A.(fg green ++ st bold) in
 
-  let adjusted_width =
-    if Lwd.peek line_numbers_visible then max_width - 5 else max_width
-  in
-
-  let mine_ui =
-    lines_to_ui mine_lines attr_line_number attr_mine adjusted_width
-      starting_line_number
-  in
+  let mine_ui = lines_to_ui mine_lines max_width attr_line_number attr_mine in
   let their_ui =
-    lines_to_ui their_lines attr_line_number attr_their adjusted_width
-      starting_line_number
+    lines_to_ui their_lines max_width attr_line_number attr_their
   in
 
   let space = Ui.space 1 0 in
   Ui.hcat
     [
-      Ui.resize ~sw:1 (Ui.vcat mine_ui);
+      Ui.resize ~sw:1 ~sh:1 (Ui.vcat mine_ui);
       space;
-      Ui.resize ~sw:1 (Ui.vcat their_ui);
+      Ui.resize ~sw:1 ~sh:1 (Ui.vcat their_ui);
     ]
 
-let count_lines_in_hunk hunk =
-  List.fold_left
-    (fun total_lines line ->
-      match line with
-      | `Common _ -> total_lines + 1
-      | `Mine _ -> total_lines + 1
-      | `Their _ -> total_lines + 1)
-    0 hunk.Patch.lines
-
-let current_hunks_side_by_side z_patches max_width : ui Lwd.t =
+let current_hunks_side_by_side z_patches : ui Lwd.t =
   let$ z = Lwd.get z_patches in
   let p = Zipper.get_focus z in
-  let initial_line_number = 1 in
-  let hunks_ui, last_line_number =
-    List.fold_left
-      (fun (acc_ui, current_line) hunk ->
-        let hunk_ui = ui_of_hunk_side_by_side hunk max_width current_line in
-        let lines_in_hunk = count_lines_in_hunk hunk in
-        (hunk_ui :: acc_ui, current_line + lines_in_hunk))
-      ([], initial_line_number) p.Patch.hunks
+  let max_width = max_segment_width p.Patch.hunks in
+  let hunks_ui =
+    List.map (fun h -> ui_of_hunk_side_by_side h max_width) p.Patch.hunks
   in
-  Printf.printf "Last line number used: %d\n" last_line_number;
-  Ui.vcat (List.rev hunks_ui)
+  Ui.vcat @@ hunks_ui
 
 (** end of side by side diff view implementation **)
-
-let dynamic_width = ref 80
 
 let view (patches : Patch.t list) =
   let help_panel =
@@ -257,7 +221,6 @@ let view (patches : Patch.t list) =
         W.string "q:   Quit the diffcessible viewer";
         W.string "n:   Move to the next operation, if present";
         W.string "p:   Move to the previous operation, if present";
-        W.string "g:   Scroll back to the top of the displayed operation.";
       ]
   in
   let z_patches : 'a Zipper.t Lwd.var =
@@ -265,12 +228,11 @@ let view (patches : Patch.t list) =
     | Some z -> Lwd.var z
     | None -> failwith "zipper_of_list: empty list"
   in
-  let max_width = !dynamic_width in
   let hunks_ui =
     Lwd.bind (Lwd.get view_mode) ~f:(fun mode ->
         match mode with
         | Normal -> current_hunks z_patches
-        | SideBySide -> current_hunks_side_by_side z_patches max_width)
+        | SideBySide -> current_hunks_side_by_side z_patches)
   in
   let curr_scroll_state = Lwd.var W.default_scroll_state in
   let change_scroll_state _action state =
@@ -321,46 +283,16 @@ let view (patches : Patch.t list) =
                  | `ASCII 't', [] ->
                      toggle_view_mode ();
                      `Handled
-                 | `ASCII 'l', [] ->
-                     toggle_line_numbers ();
-                     `Handled
                  | _ -> `Unhandled)
                (W.string
                   "Type 'h' to go to the help panel, 'q' to quit, 'n' to go to \
                    the next operation, 'p' to go to the previous operation. \
-                   Press 't' to toggle view mode. Press 'l' to toggle line \
-                   numbers.");
+                   Press 't' to toggle view mode.");
         ]
   in
-
   W.vbox [ ui ]
 
-let update_width new_width = dynamic_width := new_width
-
-let get_terminal_width_unix () =
-  let ic, oc, ec = Unix.open_process_full "tput cols" (Unix.environment ()) in
-  let width = input_line ic in
-  let _ = Unix.close_process_full (ic, oc, ec) in
-  int_of_string width
-
-let get_terminal_width_windows () =
-  (* maybe use this https://github.com/cryptosense/terminal_size ? *)
-  80
-
-let initialize_terminal_width () =
-  try
-    let width =
-      match Sys.os_type with
-      | "Unix" | "Cygwin" -> get_terminal_width_unix ()
-      | "Win32" -> get_terminal_width_windows ()
-      | _ -> raise Not_found
-    in
-    update_width width
-  with _ -> update_width 80
-
-let start patch =
-  initialize_terminal_width ();
-  Ui_loop.run ~quit ~tick_period:0.2 (view patch)
+let start patch = Ui_loop.run ~quit ~tick_period:0.2 (view patch)
 
 let start_test patch events width height =
   let convert_char_to_key (c : char) : Ui.key = (`ASCII c, []) in

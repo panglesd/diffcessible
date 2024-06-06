@@ -49,9 +49,10 @@ let ui_of_operation operation =
 
 let line_numbers_visible = Lwd.var false
 
-(* let toggle_line_numbers () = *)
-(*   let current = Lwd.peek line_numbers_visible in *)
-(*   Lwd.set line_numbers_visible (not current) *)
+let toggle_line_numbers () =
+  (* Need to toggle refresh when used so lines become visible *)
+  let current = Lwd.peek line_numbers_visible in
+  Lwd.set line_numbers_visible (not current)
 
 let ui_of_hunk hunk =
   let line_to_string i line =
@@ -179,10 +180,11 @@ let max_segment_width hunks =
       aux acc lines)
     0 hunks
 
-let lines_to_ui lines max_width attr_line_number attr_change =
+
+let lines_to_ui_with_numbers lines max_width attr_line_number attr_change =
   List.flatten
-    (List.map
-       (fun line ->
+    (List.mapi
+       (fun index line ->
          let content, attr =
            match line with
            | `Common s -> (s, attr_line_number)
@@ -194,7 +196,13 @@ let lines_to_ui lines max_width attr_line_number attr_change =
          in
          let wrapped_lines = wrap_text padded_content in
          List.map
-           (fun l -> W.string ~attr (Printf.sprintf "  %s" l))
+           (fun wrapped_line ->
+             Ui.hcat
+               [
+                 W.string ~attr:attr_line_number
+                   (Printf.sprintf "%4d " (index + 1));
+                 W.string ~attr wrapped_line;
+               ])
            wrapped_lines)
        lines)
 
@@ -205,17 +213,24 @@ let ui_of_hunk_side_by_side hunk max_width =
   let attr_mine = Notty.A.(fg red ++ st bold) in
   let attr_their = Notty.A.(fg green ++ st bold) in
 
-  let mine_ui = lines_to_ui mine_lines max_width attr_line_number attr_mine in
+  let mine_ui =
+    lines_to_ui_with_numbers mine_lines max_width attr_line_number attr_mine
+  in
   let their_ui =
-    lines_to_ui their_lines max_width attr_line_number attr_their
+    lines_to_ui_with_numbers their_lines max_width attr_line_number attr_their
   in
 
   let space = Ui.space 1 0 in
+
+  (* A simple space column between the two sides *)
   Ui.hcat
     [
       Ui.resize ~sw:1 ~sh:1 (Ui.vcat mine_ui);
+      (* Side for "mine" changes *)
       space;
+      (* Spacing column *)
       Ui.resize ~sw:1 ~sh:1 (Ui.vcat their_ui);
+      (* Side for "their" changes *)
     ]
 
 let current_hunks_side_by_side z_patches : ui Lwd.t =
@@ -238,6 +253,8 @@ let view (patches : Patch.t list) =
         W.string "q:   Quit the diffcessible viewer";
         W.string "n:   Move to the next operation, if present";
         W.string "p:   Move to the previous operation, if present";
+        W.string "t:   Toggle view mode";
+        W.string "l:   Toggle line numbers";
       ]
   in
   let z_patches : 'a Zipper.t Lwd.var =
@@ -300,11 +317,14 @@ let view (patches : Patch.t list) =
                  | `ASCII 't', [] ->
                      toggle_view_mode ();
                      `Handled
+                 | `ASCII 'l', [] ->
+                     toggle_line_numbers ();
+                     `Handled
                  | _ -> `Unhandled)
                (W.string
                   "Type 'h' to go to the help panel, 'q' to quit, 'n' to go to \
                    the next operation, 'p' to go to the previous operation. \
-                   Press 't' to toggle view mode.");
+                   Press 't' to toggle view mode, 'l' to toggle line numbers.");
         ]
   in
   W.vbox [ ui ]
@@ -337,4 +357,3 @@ let start_test patch events width height =
   Notty_unix.output_image init_image;
   Lwd.quick_release content_ui_root;
   print_newline ()
-

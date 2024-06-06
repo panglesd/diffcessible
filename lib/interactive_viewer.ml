@@ -47,13 +47,6 @@ let ui_of_operation operation =
       Ui.hcat
         [ W.string "Modification of "; W.string ~attr:blue_bold_attr path ]
 
-let line_numbers_visible = Lwd.var false
-
-let toggle_line_numbers () =
-  (* Need to toggle refresh when used so lines become visible *)
-  let current = Lwd.peek line_numbers_visible in
-  Lwd.set line_numbers_visible (not current)
-
 let ui_of_hunk hunk =
   let line_to_string i line =
     let line_number = Printf.sprintf "%4d " (i + 1) in
@@ -319,14 +312,11 @@ let view (patches : Patch.t list) =
                  | `ASCII 't', [] ->
                      toggle_view_mode ();
                      `Handled
-                 | `ASCII 'l', [] ->
-                     toggle_line_numbers ();
-                     `Handled
                  | _ -> `Unhandled)
                (W.string
                   "Type 'h' to go to the help panel, 'q' to quit, 'n' to go to \
                    the next operation, 'p' to go to the previous operation. \
-                   Press 't' to toggle view mode, 'l' to toggle line numbers.");
+                   Press 't' to toggle view mode.");
         ]
   in
   W.vbox [ ui ]

@@ -47,16 +47,7 @@ let ui_of_operation operation =
       Ui.hcat
         [ W.string "Modification of "; W.string ~attr:blue_bold_attr path ]
 
-let ui_of_hunk hunk =
-  let line_to_string i line =
-    let line_number = Printf.sprintf "%4d " (i + 1) in
-    match line with
-    | `Their text -> W.string ~attr:Notty.A.(fg red) (line_number ^ text)
-    | `Mine text -> W.string ~attr:Notty.A.(fg green) (line_number ^ text)
-    | `Common text -> W.string (line_number ^ text)
-  in
-
-  Ui.vcat @@ List.mapi line_to_string hunk.Patch.lines
+let string_of_hunk = Format.asprintf "%a" Patch.pp_hunk
 
 let current_operation z_patches : ui Lwd.t =
   let$ z = Lwd.get z_patches in
@@ -66,8 +57,8 @@ let current_operation z_patches : ui Lwd.t =
 let current_hunks z_patches : ui Lwd.t =
   let$ z = Lwd.get z_patches in
   let p = Zipper.get_focus z in
-  let hunks = List.map ui_of_hunk p.Patch.hunks in
-  Ui.vcat hunks
+  let hunks = List.map (fun h -> W.string (string_of_hunk h)) p.Patch.hunks in
+  Ui.vcat @@ hunks
 
 type direction = Prev | Next
 
@@ -136,60 +127,26 @@ let rec split_and_align_hunk hunks mine_acc their_acc =
   | `Their s :: t ->
       split_and_align_hunk t (`Common "" :: mine_acc) (`Their s :: their_acc)
 
-let max_segment_width hunks =
-  let rec aux max_width lines =
-    match lines with
-    | [] -> max_width
-    | (`Common s | `Mine s | `Their s) :: rest ->
-        let width = String.length s in
-        aux (max max_width width) rest
-  in
-  List.fold_left
-    (fun acc hunk ->
-      let mine_lines, their_lines =
-        split_and_align_hunk hunk.Patch.lines [] []
-      in
-      let lines = List.concat [ mine_lines; their_lines ] in
-      aux acc lines)
-    0 hunks
-
-let lines_to_ui_with_numbers lines max_width attr_line_number attr_change =
-  let line_num = ref 0 in
+let lines_to_ui lines attr_change =
   List.map
     (fun line ->
-      incr line_num;
-      (* Increment line number for each new line *)
-      let line_label = Printf.sprintf "%4d " !line_num in
       let content, attr =
         match line with
-        | `Common s -> (s, attr_line_number)
+        | `Common s -> (s, Notty.A.empty)
         | `Mine s -> (s, attr_change)
         | `Their s -> (s, attr_change)
       in
-      let displayed_text =
-        if String.length content > max_width then String.sub content 0 max_width
-        else content
-      in
-      Ui.hcat
-        [
-          W.string ~attr:attr_line_number line_label;
-          W.string ~attr displayed_text;
-        ])
+      W.string ~attr content)
     lines
 
-let ui_of_hunk_side_by_side hunk max_width =
+let ui_of_hunk_side_by_side hunk =
   let mine_lines, their_lines = split_and_align_hunk hunk.Patch.lines [] [] in
 
-  let attr_line_number = Notty.A.(fg lightblue) in
   let attr_mine = Notty.A.(fg red ++ st bold) in
   let attr_their = Notty.A.(fg green ++ st bold) in
 
-  let mine_ui =
-    lines_to_ui_with_numbers mine_lines max_width attr_line_number attr_mine
-  in
-  let their_ui =
-    lines_to_ui_with_numbers their_lines max_width attr_line_number attr_their
-  in
+  let mine_ui = lines_to_ui mine_lines attr_mine in
+  let their_ui = lines_to_ui their_lines attr_their in
   let space = Ui.space 1 0 in
   Ui.hcat
     [
@@ -201,10 +158,7 @@ let ui_of_hunk_side_by_side hunk max_width =
 let current_hunks_side_by_side z_patches : ui Lwd.t =
   let$ z = Lwd.get z_patches in
   let p = Zipper.get_focus z in
-  let max_width = max_segment_width p.Patch.hunks in
-  let hunks_ui =
-    List.map (fun h -> ui_of_hunk_side_by_side h max_width) p.Patch.hunks
-  in
+  let hunks_ui = List.map (fun h -> ui_of_hunk_side_by_side h) p.Patch.hunks in
   Ui.vcat @@ hunks_ui
 
 (** end of side by side diff view implementation **)

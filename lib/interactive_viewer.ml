@@ -193,9 +193,9 @@ let ui_of_hunk_side_by_side hunk max_width =
   let space = Ui.space 1 0 in
   Ui.hcat
     [
-      Ui.resize ~sw:1 (Ui.vcat mine_ui);
+      Ui.resize ~w:0 ~sw:2 (Ui.vcat mine_ui);
       space;
-      Ui.resize ~sw:1 (Ui.vcat their_ui);
+      Ui.resize ~w:0 ~sw:2 (Ui.vcat their_ui);
     ]
 
 let current_hunks_side_by_side z_patches : ui Lwd.t =

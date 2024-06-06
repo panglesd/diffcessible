@@ -56,15 +56,13 @@ let toggle_line_numbers () =
 
 let ui_of_hunk hunk =
   let line_to_string i line =
-    let line_number =
-      if Lwd.peek line_numbers_visible then Printf.sprintf "%4d " (i + 1)
-      else ""
-    in
+    let line_number = Printf.sprintf "%4d " (i + 1) in
     match line with
     | `Their text -> W.string ~attr:Notty.A.(fg red) (line_number ^ text)
     | `Mine text -> W.string ~attr:Notty.A.(fg green) (line_number ^ text)
     | `Common text -> W.string (line_number ^ text)
   in
+
   Ui.vcat @@ List.mapi line_to_string hunk.Patch.lines
 
 let current_operation z_patches : ui Lwd.t =
@@ -180,11 +178,11 @@ let max_segment_width hunks =
       aux acc lines)
     0 hunks
 
-
 let lines_to_ui_with_numbers lines max_width attr_line_number attr_change =
+  let line_num = ref 0 in
   List.flatten
-    (List.mapi
-       (fun index line ->
+    (List.map
+       (fun line ->
          let content, attr =
            match line with
            | `Common s -> (s, attr_line_number)
@@ -197,10 +195,15 @@ let lines_to_ui_with_numbers lines max_width attr_line_number attr_change =
          let wrapped_lines = wrap_text padded_content in
          List.map
            (fun wrapped_line ->
+             let line_label =
+               if wrapped_line = List.hd wrapped_lines then (
+                 incr line_num;
+                 Printf.sprintf "%4d " !line_num)
+               else "     "
+             in
              Ui.hcat
                [
-                 W.string ~attr:attr_line_number
-                   (Printf.sprintf "%4d " (index + 1));
+                 W.string ~attr:attr_line_number line_label;
                  W.string ~attr wrapped_line;
                ])
            wrapped_lines)

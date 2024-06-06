@@ -143,21 +143,27 @@ let rec split_and_align_hunk hunks mine_acc their_acc =
   | `Their s :: t ->
       split_and_align_hunk t (`Common "" :: mine_acc) (`Their s :: their_acc)
 
-let wrap_text s =
-  let rec aux acc line =
-    if String.length line <= 0 then List.rev acc
-    else
-      let before, after =
-        if String.length line <= 40 then (line, "")
-        else
-          let split_index =
-            try String.rindex_from line 40 ' ' with Not_found -> 40
-          in
-          ( String.sub line 0 split_index,
-            String.sub line (split_index + 1)
-              (String.length line - split_index - 1) )
+let wrap_text s max_width =
+  let rec aux acc current =
+    if String.length current > max_width then
+      let space_index =
+        try Some (String.rindex_from current (max_width - 1) ' ')
+        with Not_found -> None
       in
-      aux (before :: acc) after
+      match space_index with
+      | Some idx ->
+          let line = String.sub current 0 idx in
+          let rest =
+            String.sub current (idx + 1) (String.length current - idx - 1)
+          in
+          aux (line :: acc) rest
+      | None ->
+          let line = String.sub current 0 max_width in
+          let rest =
+            String.sub current max_width (String.length current - max_width)
+          in
+          aux (line :: acc) rest
+    else List.rev (current :: acc)
   in
   aux [] s
 
@@ -189,23 +195,22 @@ let lines_to_ui_with_numbers lines max_width attr_line_number attr_change =
            | `Mine s -> (s, attr_change)
            | `Their s -> (s, attr_change)
          in
-         let padded_content =
-           content ^ String.make (max_width - String.length content) ' '
-         in
-         let wrapped_lines = wrap_text padded_content in
-         List.map
-           (fun wrapped_line ->
-             let line_label =
-               if wrapped_line = List.hd wrapped_lines then (
-                 incr line_num;
-                 Printf.sprintf "%4d " !line_num)
-               else "     "
-             in
-             Ui.hcat
-               [
-                 W.string ~attr:attr_line_number line_label;
-                 W.string ~attr wrapped_line;
-               ])
+         let wrapped_lines = wrap_text content max_width in
+         List.mapi
+           (fun i wrapped_line ->
+             if wrapped_line <> "" then (
+               if i = 0 then incr line_num;
+               (* Only increment on the first segment of non-empty wrapped line *)
+               let line_label =
+                 if i = 0 then Printf.sprintf "%4d " !line_num else "     "
+               in
+               Ui.hcat
+                 [
+                   W.string ~attr:attr_line_number line_label;
+                   W.string ~attr wrapped_line;
+                 ])
+             else
+               Ui.hcat [ W.string ~attr "     "; W.string ~attr wrapped_line ])
            wrapped_lines)
        lines)
 
@@ -222,18 +227,12 @@ let ui_of_hunk_side_by_side hunk max_width =
   let their_ui =
     lines_to_ui_with_numbers their_lines max_width attr_line_number attr_their
   in
-
   let space = Ui.space 1 0 in
-
-  (* A simple space column between the two sides *)
   Ui.hcat
     [
-      Ui.resize ~sw:1 ~sh:1 (Ui.vcat mine_ui);
-      (* Side for "mine" changes *)
+      Ui.resize ~sw:1 (Ui.vcat mine_ui);
       space;
-      (* Spacing column *)
-      Ui.resize ~sw:1 ~sh:1 (Ui.vcat their_ui);
-      (* Side for "their" changes *)
+      Ui.resize ~sw:1 (Ui.vcat their_ui);
     ]
 
 let current_hunks_side_by_side z_patches : ui Lwd.t =

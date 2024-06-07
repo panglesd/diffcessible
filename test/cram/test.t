@@ -21,7 +21,7 @@ This is a cram test for the new executable.
   
   
   
-  Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation
+  Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation. Press 't' to toggle view mode.
   $ dummy_terminal example.diff n
   Operation 2 of 14, 1 hunk
   3 additions, 1 removal
@@ -42,7 +42,7 @@ This is a cram test for the new executable.
   
   
   
-  Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation
+  Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation. Press 't' to toggle view mode.
   $ dummy_terminal example.diff n n
   Operation 3 of 14, 1 hunk
   1 addition, 1 removal
@@ -63,7 +63,7 @@ This is a cram test for the new executable.
   
   
   
-  Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation
+  Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation. Press 't' to toggle view mode.
   $ dummy_terminal example.diff h 
   Help Panel:
   
@@ -71,8 +71,8 @@ This is a cram test for the new executable.
   q:   Quit the diffcessible viewer
   n:   Move to the next operation, if present
   p:   Move to the previous operation, if present
-  g:   Scroll back to the top of the displayed operation.
-  
+  t:   Toggle view mode
+  l:   Toggle line numbers
   
   
   
@@ -105,7 +105,7 @@ This is a cram test for the new executable.
   
   
   
-  Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation
+  Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation. Press 't' to toggle view mode.
   $ dummy_terminal more-examples.diff n
   Operation 2 of 2, 1 hunk
   2 additions, 1 removal
@@ -126,4 +126,77 @@ This is a cram test for the new executable.
   
   
   
-  Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation
+  Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation. Press 't' to toggle view mode.
+
+
+
+
+
+
+# Testing for side by side view 
+  $ dummy_terminal more-examples.diff t 
+  Operation 1 of 2, 1 hunk
+  2 additions, 1 removal
+  Modification of file.txt
+  Hi everyone!                                                                Hello World!
+                                                                              This is the diffcessible project.
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation. Press 't' to toggle view mode.
+
+  $ dummy_terminal more-examples.diff n t
+  Operation 2 of 2, 1 hunk
+  2 additions, 1 removal
+  Modification of file.txt
+  This file starts at line 3.                                                 This file starts at line 5.
+                                                                              This is the second test case in this file.
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation. Press 't' to toggle view mode.
+
+  $ dummy_terminal more-examples.diff n n t
+  Operation 2 of 2, 1 hunk
+  2 additions, 1 removal
+  Modification of file.txt
+  This file starts at line 3.                                                 This file starts at line 5.
+                                                                              This is the second test case in this file.
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation. Press 't' to toggle view mode.
+

@@ -104,6 +104,65 @@ let change_summary z_patches : ui Lwd.t =
   in
   W.string ~attr:Notty.A.(fg lightcyan) operation_count
 
+(** Side by side diff view implementation **)
+
+type view_mode = SideBySide | Normal
+
+let view_mode = Lwd.var Normal
+
+let toggle_view_mode () =
+  match Lwd.peek view_mode with
+  | Normal -> Lwd.set view_mode SideBySide
+  | SideBySide -> Lwd.set view_mode Normal
+
+let rec split_and_align_hunk hunks mine_acc their_acc =
+  match hunks with
+  | [] -> (List.rev mine_acc, List.rev their_acc)
+  | (`Common _ as common) :: t ->
+      split_and_align_hunk t (common :: mine_acc) (common :: their_acc)
+  | `Mine s :: `Their s' :: t ->
+      split_and_align_hunk t (`Mine s :: mine_acc) (`Their s' :: their_acc)
+  | `Mine s :: t ->
+      split_and_align_hunk t (`Mine s :: mine_acc) (`Common "" :: their_acc)
+  | `Their s :: t ->
+      split_and_align_hunk t (`Common "" :: mine_acc) (`Their s :: their_acc)
+
+let lines_to_ui lines attr_change =
+  List.map
+    (fun line ->
+      let content, attr =
+        match line with
+        | `Common s -> (s, Notty.A.empty)
+        | `Mine s -> (s, attr_change)
+        | `Their s -> (s, attr_change)
+      in
+      W.string ~attr content)
+    lines
+
+let ui_of_hunk_side_by_side hunk =
+  let mine_lines, their_lines = split_and_align_hunk hunk.Patch.lines [] [] in
+
+  let attr_mine = Notty.A.(fg red ++ st bold) in
+  let attr_their = Notty.A.(fg green ++ st bold) in
+
+  let mine_ui = lines_to_ui mine_lines attr_mine in
+  let their_ui = lines_to_ui their_lines attr_their in
+  let space = Ui.space 1 0 in
+  Ui.hcat
+    [
+      Ui.resize ~w:0 ~sw:2 (Ui.vcat mine_ui);
+      space;
+      Ui.resize ~w:0 ~sw:2 (Ui.vcat their_ui);
+    ]
+
+let current_hunks_side_by_side z_patches : ui Lwd.t =
+  let$ z = Lwd.get z_patches in
+  let p = Zipper.get_focus z in
+  let hunks_ui = List.map (fun h -> ui_of_hunk_side_by_side h) p.Patch.hunks in
+  Ui.vcat @@ hunks_ui
+
+(** end of side by side diff view implementation **)
+
 let view (patches : Patch.t list) =
   let help_panel =
     Ui.vcat
@@ -113,13 +172,20 @@ let view (patches : Patch.t list) =
         W.string "q:   Quit the diffcessible viewer";
         W.string "n:   Move to the next operation, if present";
         W.string "p:   Move to the previous operation, if present";
-        W.string "g:   Scroll back to the top of the displayed operation.";
+        W.string "t:   Toggle view mode";
+        W.string "l:   Toggle line numbers";
       ]
   in
   let z_patches : 'a Zipper.t Lwd.var =
     match Zipper.zipper_of_list patches with
     | Some z -> Lwd.var z
     | None -> failwith "zipper_of_list: empty list"
+  in
+  let hunks_ui =
+    Lwd.bind (Lwd.get view_mode) ~f:(fun mode ->
+        match mode with
+        | Normal -> current_hunks z_patches
+        | SideBySide -> current_hunks_side_by_side z_patches)
   in
   let curr_scroll_state = Lwd.var W.default_scroll_state in
   let change_scroll_state _action state =
@@ -151,8 +217,7 @@ let view (patches : Patch.t list) =
           current_operation z_patches;
           W.vscroll_area
             ~state:(Lwd.get curr_scroll_state)
-            ~change:change_scroll_state
-          @@ current_hunks z_patches;
+            ~change:change_scroll_state hunks_ui;
           Lwd.pure
           @@ Ui.keyboard_area
                (function
@@ -168,14 +233,14 @@ let view (patches : Patch.t list) =
                  | `ASCII 'h', [] ->
                      Lwd.set help true;
                      `Handled
-                 | `ASCII 'g', [] ->
-                     Lwd.set curr_scroll_state
-                       { (Lwd.peek curr_scroll_state) with W.position = 0 };
+                 | `ASCII 't', [] ->
+                     toggle_view_mode ();
                      `Handled
                  | _ -> `Unhandled)
                (W.string
                   "Type 'h' to go to the help panel, 'q' to quit, 'n' to go to \
-                   the next operation, 'p' to go to the previous operation");
+                   the next operation, 'p' to go to the previous operation. \
+                   Press 't' to toggle view mode.");
         ]
   in
   W.vbox [ ui ]

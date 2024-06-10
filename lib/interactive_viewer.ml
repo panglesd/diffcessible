@@ -115,6 +115,10 @@ let toggle_view_mode () =
   | Normal -> Lwd.set view_mode SideBySide
   | SideBySide -> Lwd.set view_mode Normal
 
+(* Somewhere here we are not organizing *)
+(* Adding a type for changes / common / empty *)
+(* Rewrite this function to tag properly  *)
+
 let rec split_and_align_hunk hunks mine_acc their_acc =
   match hunks with
   | [] -> (List.rev mine_acc, List.rev their_acc)
@@ -129,12 +133,8 @@ let rec split_and_align_hunk hunks mine_acc their_acc =
 
 let lines_with_numbers lines attr_change line_num prefix =
   List.mapi
-    (fun index line ->
-      let is_last = index + 1 = List.length lines in
+    (fun _ line ->
       match line with
-      | `Common s when s = "" && is_last -> ("", Notty.A.empty)
-      | `Mine s when s = "" && is_last -> ("", Notty.A.empty)
-      | `Their s when s = "" && is_last -> ("", Notty.A.empty)
       | `Common s ->
           incr line_num;
           (Printf.sprintf "%3d   %s" !line_num s, Notty.A.empty)

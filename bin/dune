@@ -1,4 +1,5 @@
 (executable
  (public_name diffcessible)
  (name main)
- (libraries diffcessible cmdliner patch))
+ (libraries diffcessible cmdliner patch async core_unix.command_unix)
+ (preprocess (pps ppx_jane)))

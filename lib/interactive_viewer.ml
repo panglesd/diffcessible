@@ -115,6 +115,10 @@ let toggle_view_mode () =
   | Normal -> Lwd.set view_mode SideBySide
   | SideBySide -> Lwd.set view_mode Normal
 
+(* Somewhere here we are not organizing *)
+(* Adding a type for changes / common / empty *)
+(* Rewrite this function to tag properly  *)
+
 let rec split_and_align_hunk hunks mine_acc their_acc =
   match hunks with
   | [] -> (List.rev mine_acc, List.rev their_acc)
@@ -127,32 +131,84 @@ let rec split_and_align_hunk hunks mine_acc their_acc =
   | `Their s :: t ->
       split_and_align_hunk t (`Common "" :: mine_acc) (`Their s :: their_acc)
 
-let lines_to_ui lines attr_change =
-  List.map
-    (fun line ->
-      let content, attr =
-        match line with
-        | `Common s -> (s, Notty.A.empty)
-        | `Mine s -> (s, attr_change)
-        | `Their s -> (s, attr_change)
-      in
-      W.string ~attr content)
+let lines_with_numbers lines attr_change line_num prefix =
+  List.mapi
+    (fun _ line ->
+      match line with
+      | `Common s ->
+          incr line_num;
+          (Printf.sprintf "%3d   %s" !line_num s, Notty.A.empty)
+      | `Mine s ->
+          incr line_num;
+          (Printf.sprintf "%3d %s %s" !line_num prefix s, attr_change)
+      | `Their s ->
+          incr line_num;
+          (Printf.sprintf "%3d %s %s" !line_num prefix s, attr_change))
     lines
+  |> List.filter (fun (content, _) -> content <> "")
+  |> List.map (fun (content, attr) -> W.string ~attr content)
+
+let create_summary start_line_num line_count attr change_type =
+  if line_count > 0 then
+    let sign =
+      match change_type with `Add -> "+" | `Remove -> "-" | `Empty -> ""
+    in
+    let summary =
+      Printf.sprintf "@@ %s%d,%d @@" sign start_line_num line_count
+    in
+    Some (W.string ~attr summary)
+  else if line_count = 0 then
+    let summary = Printf.sprintf "@@ 0,0 @@" in
+    Some (W.string ~attr summary)
+  else failwith "line_count cannot be negative"
 
 let ui_of_hunk_side_by_side hunk =
-  let mine_lines, their_lines = split_and_align_hunk hunk.Patch.lines [] [] in
+  let mine_line_num = ref hunk.Patch.mine_start in
+  let their_line_num = ref hunk.Patch.their_start in
 
   let attr_mine = Notty.A.(fg red ++ st bold) in
   let attr_their = Notty.A.(fg green ++ st bold) in
 
-  let mine_ui = lines_to_ui mine_lines attr_mine in
-  let their_ui = lines_to_ui their_lines attr_their in
+  let mine_lines, their_lines = split_and_align_hunk hunk.Patch.lines [] [] in
+
+  (* Generate summaries after processing line numbers *)
+  let summary_mine =
+    create_summary
+      (if hunk.Patch.mine_len = 0 then 0 else hunk.Patch.mine_start + 1)
+      hunk.Patch.mine_len attr_mine `Remove
+  in
+  let summary_their =
+    create_summary
+      (if hunk.Patch.their_len = 0 then 0 else hunk.Patch.their_start + 1)
+      hunk.Patch.their_len attr_their `Add
+  in
+  let empty_summary = create_summary 0 0 Notty.A.empty `Empty in
+
   let space = Ui.space 1 0 in
+
+  let content_mine =
+    if hunk.Patch.mine_len = 0 then []
+    else lines_with_numbers mine_lines attr_mine mine_line_num "-"
+  in
+  let content_their =
+    if hunk.Patch.their_len = 0 then []
+    else lines_with_numbers their_lines attr_their their_line_num "+"
+  in
+
+  let summary_mine_display =
+    if hunk.Patch.mine_len = 0 then empty_summary else summary_mine
+  in
+  let summary_their_display =
+    if hunk.Patch.their_len = 0 then empty_summary else summary_their
+  in
+
   Ui.hcat
     [
-      Ui.resize ~w:0 ~sw:2 (Ui.vcat mine_ui);
+      Ui.resize ~w:0 ~sw:2
+        (Ui.vcat (Option.to_list summary_mine_display @ content_mine));
       space;
-      Ui.resize ~w:0 ~sw:2 (Ui.vcat their_ui);
+      Ui.resize ~w:0 ~sw:2
+        (Ui.vcat (Option.to_list summary_their_display @ content_their));
     ]
 
 let current_hunks_side_by_side z_patches : ui Lwd.t =

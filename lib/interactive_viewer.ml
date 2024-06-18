@@ -115,44 +115,93 @@ let toggle_view_mode () =
   | Normal -> Lwd.set view_mode SideBySide
   | SideBySide -> Lwd.set view_mode Normal
 
+(* Somewhere here we are not organizing *)
+(* Adding a type for changes / common / empty *)
+(* Rewrite this function to tag properly  *)
+
+type line = Change of change_origin * string | Common of string | Empty
+and change_origin = Mine | Their
+
 let rec split_and_align_hunk hunks mine_acc their_acc =
   match hunks with
   | [] -> (List.rev mine_acc, List.rev their_acc)
-  | (`Common _ as common) :: t ->
-      split_and_align_hunk t (common :: mine_acc) (common :: their_acc)
-  | `Mine s :: `Their s' :: t ->
-      split_and_align_hunk t (`Mine s :: mine_acc) (`Their s' :: their_acc)
-  | `Mine s :: t ->
-      split_and_align_hunk t (`Mine s :: mine_acc) (`Common "" :: their_acc)
-  | `Their s :: t ->
-      split_and_align_hunk t (`Common "" :: mine_acc) (`Their s :: their_acc)
+  | `Common line :: t ->
+      split_and_align_hunk t (Common line :: mine_acc) (Common line :: their_acc)
+  | `Mine line :: t ->
+      let mine_line = Change (Mine, line) in
+      let their_line = Empty in
+      split_and_align_hunk t (mine_line :: mine_acc) (their_line :: their_acc)
+  | `Their line :: t ->
+      let their_line = Change (Their, line) in
+      let mine_line = Empty in
+      split_and_align_hunk t (mine_line :: mine_acc) (their_line :: their_acc)
 
-let lines_to_ui lines attr_change =
-  List.map
-    (fun line ->
-      let content, attr =
-        match line with
-        | `Common s -> (s, Notty.A.empty)
-        | `Mine s -> (s, attr_change)
-        | `Their s -> (s, attr_change)
-      in
-      W.string ~attr content)
-    lines
+let lines_with_numbers lines attr_change line_num prefix =
+  List.fold_left
+    (fun acc line ->
+      match line with
+      | Common s ->
+          let content = Printf.sprintf "%3d   %s" !line_num s in
+          incr line_num;
+          (content, Notty.A.empty) :: acc
+      | Change (Mine, s) ->
+          let content = Printf.sprintf "%3d %s %s" !line_num prefix s in
+          incr line_num;
+          (content, attr_change) :: acc
+      | Change (Their, s) ->
+          let content = Printf.sprintf "%3d %s %s" !line_num prefix s in
+          incr line_num;
+          (content, attr_change) :: acc
+      | Empty -> acc)
+    [] lines
+  |> List.rev
+  |> List.map (fun (content, attr) -> W.string ~attr content)
+
+let create_summary start_line_num line_count attr change_type =
+  if line_count > 0 then
+    let sign =
+      match change_type with `Add -> "+" | `Remove -> "-" | `Empty -> ""
+    in
+    let summary =
+      Printf.sprintf "@@ %s%d,%d @@" sign start_line_num line_count
+    in
+    Some (W.string ~attr summary)
+  else if line_count = 0 then
+    let summary = Printf.sprintf "@@ 0,0 @@" in
+    Some (W.string ~attr summary)
+  else failwith "line_count cannot be negative"
 
 let ui_of_hunk_side_by_side hunk =
-  let mine_lines, their_lines = split_and_align_hunk hunk.Patch.lines [] [] in
+  let mine_line_num = ref (hunk.Patch.mine_start + 1) in
+  let their_line_num = ref (hunk.Patch.their_start + 1) in
 
   let attr_mine = Notty.A.(fg red ++ st bold) in
   let attr_their = Notty.A.(fg green ++ st bold) in
 
-  let mine_ui = lines_to_ui mine_lines attr_mine in
-  let their_ui = lines_to_ui their_lines attr_their in
+  let mine_lines, their_lines = split_and_align_hunk hunk.Patch.lines [] [] in
+
+  let content_mine =
+    lines_with_numbers mine_lines attr_mine mine_line_num "-"
+  in
+  let content_their =
+    lines_with_numbers their_lines attr_their their_line_num "+"
+  in
+
+  let summary_mine =
+    create_summary !mine_line_num hunk.Patch.mine_len attr_mine `Remove
+  in
+  let summary_their =
+    create_summary !their_line_num hunk.Patch.their_len attr_their `Add
+  in
+
   let space = Ui.space 1 0 in
   Ui.hcat
     [
-      Ui.resize ~w:0 ~sw:2 (Ui.vcat mine_ui);
+      Ui.resize ~w:0 ~sw:2
+        (Ui.vcat (Option.to_list summary_mine @ content_mine));
       space;
-      Ui.resize ~w:0 ~sw:2 (Ui.vcat their_ui);
+      Ui.resize ~w:0 ~sw:2
+        (Ui.vcat (Option.to_list summary_their @ content_their));
     ]
 
 let current_hunks_side_by_side z_patches : ui Lwd.t =

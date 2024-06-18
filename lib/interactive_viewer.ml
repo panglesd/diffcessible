@@ -122,76 +122,77 @@ let toggle_view_mode () =
 type line = Change of change_origin * string | Common of string | Empty
 and change_origin = Mine | Their
 
-let rec split_and_align_hunk hunks mine_acc their_acc =
+let rec split_and_align_hunk hunks mine_acc their_acc mine_line_num
+    their_line_num =
   match hunks with
-  | [] -> (List.rev mine_acc, List.rev their_acc)
+  | [] -> (List.rev mine_acc, List.rev their_acc, mine_line_num, their_line_num)
   | `Common line :: t ->
-      split_and_align_hunk t (Common line :: mine_acc) (Common line :: their_acc)
+      split_and_align_hunk t (Common line :: mine_acc)
+        (Common line :: their_acc) (mine_line_num + 1) (their_line_num + 1)
   | `Mine line :: t ->
-      let mine_line = Change (Mine, line) in
-      let their_line = Empty in
-      split_and_align_hunk t (mine_line :: mine_acc) (their_line :: their_acc)
+      split_and_align_hunk t
+        (Change (Mine, line) :: mine_acc)
+        (Empty :: their_acc) (mine_line_num + 1) their_line_num
   | `Their line :: t ->
-      let their_line = Change (Their, line) in
-      let mine_line = Empty in
-      split_and_align_hunk t (mine_line :: mine_acc) (their_line :: their_acc)
+      split_and_align_hunk t (Empty :: mine_acc)
+        (Change (Their, line) :: their_acc)
+        mine_line_num (their_line_num + 1)
 
 let lines_with_numbers lines attr_change line_num prefix =
   List.fold_left
     (fun acc line ->
       match line with
       | Common s ->
+          line_num := !line_num + 1;
           let content = Printf.sprintf "%3d   %s" !line_num s in
-          incr line_num;
           (content, Notty.A.empty) :: acc
       | Change (Mine, s) ->
-          let content = Printf.sprintf "%3d %s %s" !line_num prefix s in
           incr line_num;
+          let content = Printf.sprintf "%3d %s %s" !line_num prefix s in
           (content, attr_change) :: acc
       | Change (Their, s) ->
-          let content = Printf.sprintf "%3d %s %s" !line_num prefix s in
           incr line_num;
+          let content = Printf.sprintf "%3d %s %s" !line_num prefix s in
           (content, attr_change) :: acc
       | Empty -> acc)
     [] lines
   |> List.rev
   |> List.map (fun (content, attr) -> W.string ~attr content)
 
-let create_summary start_line_num line_count attr change_type =
-  if line_count > 0 then
-    let sign =
-      match change_type with `Add -> "+" | `Remove -> "-" | `Empty -> ""
-    in
-    let summary =
-      Printf.sprintf "@@ %s%d,%d @@" sign start_line_num line_count
-    in
-    Some (W.string ~attr summary)
-  else if line_count = 0 then
-    let summary = Printf.sprintf "@@ 0,0 @@" in
-    Some (W.string ~attr summary)
-  else failwith "line_count cannot be negative"
+let create_summary start_line_num hunk_length attr change_type =
+  let sign = match change_type with `Add -> "+" | `Remove -> "-" in
+  if hunk_length > 0 then
+    Some
+      (W.string ~attr
+         (Printf.sprintf "@@ %s%d,%d @@" sign start_line_num hunk_length))
+  else Some (W.string ~attr (Printf.sprintf "@@ %s0,0 @@" sign))
 
 let ui_of_hunk_side_by_side hunk =
-  let mine_line_num = ref (hunk.Patch.mine_start + 1) in
-  let their_line_num = ref (hunk.Patch.their_start + 1) in
+  let mine_line_num = hunk.Patch.mine_start in
+  let their_line_num = hunk.Patch.their_start in
 
   let attr_mine = Notty.A.(fg red ++ st bold) in
   let attr_their = Notty.A.(fg green ++ st bold) in
 
-  let mine_lines, their_lines = split_and_align_hunk hunk.Patch.lines [] [] in
+  let mine_lines, their_lines, mine_hunk_length, their_hunk_length =
+    split_and_align_hunk hunk.Patch.lines [] [] mine_line_num their_line_num
+  in
 
   let content_mine =
-    lines_with_numbers mine_lines attr_mine mine_line_num "-"
+    lines_with_numbers mine_lines attr_mine (ref mine_line_num) "-"
   in
   let content_their =
-    lines_with_numbers their_lines attr_their their_line_num "+"
+    lines_with_numbers their_lines attr_their (ref their_line_num) "+"
   in
-
   let summary_mine =
-    create_summary !mine_line_num hunk.Patch.mine_len attr_mine `Remove
+    create_summary
+      (hunk.Patch.mine_start + 1)
+      mine_hunk_length attr_mine `Remove
   in
   let summary_their =
-    create_summary !their_line_num hunk.Patch.their_len attr_their `Add
+    create_summary
+      (hunk.Patch.their_start + 1)
+      their_hunk_length attr_their `Add
   in
 
   let space = Ui.space 1 0 in

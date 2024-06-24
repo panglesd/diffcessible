@@ -124,19 +124,56 @@ and change_origin = Mine | Their
 
 let rec split_and_align_hunk hunks mine_acc their_acc mine_line_num
     their_line_num =
+  let rec buffer_changes temp_mine temp_their hunks =
+    match hunks with
+    | [] -> (temp_mine, temp_their, hunks)
+    | `Common _ :: _ -> (temp_mine, temp_their, hunks)
+    | `Mine line :: t ->
+        buffer_changes (Change (Mine, line) :: temp_mine) temp_their t
+    | `Their line :: t ->
+        buffer_changes temp_mine (Change (Their, line) :: temp_their) t
+  in
+
+  let append_balanced temp_mine temp_their =
+    let rec fill_empty lst n =
+      if n <= 0 then lst else fill_empty (Empty :: lst) (n - 1)
+    in
+    let mine_len = List.length temp_mine in
+    let their_len = List.length temp_their in
+    let balanced_mine, balanced_their =
+      if mine_len > their_len then
+        let empty_their = fill_empty [] (mine_len - their_len) in
+        (List.rev temp_mine, List.rev (empty_their @ temp_their))
+      else if their_len > mine_len then
+        let empty_mine = fill_empty [] (their_len - mine_len) in
+        (List.rev (empty_mine @ temp_mine), List.rev temp_their)
+      else (List.rev temp_mine, List.rev temp_their)
+    in
+    (balanced_mine, balanced_their)
+  in
   match hunks with
   | [] -> (List.rev mine_acc, List.rev their_acc, mine_line_num, their_line_num)
-  | `Common line :: t ->
-      split_and_align_hunk t (Common line :: mine_acc)
-        (Common line :: their_acc) (mine_line_num + 1) (their_line_num + 1)
-  | `Mine line :: t ->
-      split_and_align_hunk t
-        (Change (Mine, line) :: mine_acc)
-        (Empty :: their_acc) (mine_line_num + 1) their_line_num
-  | `Their line :: t ->
-      split_and_align_hunk t (Empty :: mine_acc)
-        (Change (Their, line) :: their_acc)
-        mine_line_num (their_line_num + 1)
+  | _ -> (
+      let temp_mine, temp_their, remaining_hunks = buffer_changes [] [] hunks in
+      let balanced_mine, balanced_their =
+        append_balanced temp_mine temp_their
+      in
+      let updated_mine_acc = List.rev_append balanced_mine mine_acc in
+      let updated_their_acc = List.rev_append balanced_their their_acc in
+      let updated_mine_line_num = mine_line_num + List.length balanced_mine in
+      let updated_their_line_num =
+        their_line_num + List.length balanced_their
+      in
+      match remaining_hunks with
+      | `Common line :: t ->
+          let common_mine_acc = Common line :: updated_mine_acc in
+          let common_their_acc = Common line :: updated_their_acc in
+          split_and_align_hunk t common_mine_acc common_their_acc
+            (updated_mine_line_num + 1)
+            (updated_their_line_num + 1)
+      | _ ->
+          split_and_align_hunk remaining_hunks updated_mine_acc
+            updated_their_acc updated_mine_line_num updated_their_line_num)
 
 let lines_with_numbers lines attr_change line_num prefix =
   List.fold_left
@@ -154,7 +191,9 @@ let lines_with_numbers lines attr_change line_num prefix =
           incr line_num;
           let content = Printf.sprintf "%3d %s %s" !line_num prefix s in
           (content, attr_change) :: acc
-      | Empty -> acc)
+      | Empty ->
+          let content = Printf.sprintf "      " in
+          (content, Notty.A.empty) :: acc)
     [] lines
   |> List.rev
   |> List.map (fun (content, attr) -> W.string ~attr content)

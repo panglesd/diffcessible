@@ -115,80 +115,43 @@ let toggle_view_mode () =
   | Normal -> Lwd.set view_mode SideBySide
   | SideBySide -> Lwd.set view_mode Normal
 
-(* Somewhere here we are not organizing *)
-(* Adding a type for changes / common / empty *)
-(* Rewrite this function to tag properly  *)
-
 type line = Change of change_origin * string | Common of string | Empty
 and change_origin = Mine | Their
 
-let rec split_and_align_hunk hunks mine_acc their_acc mine_hunk_length
-    their_hunk_length =
-  let rec buffer_changes temp_mine temp_their mine_hunk_length their_hunk_length
-      hunks =
+let rec split_and_align_hunk hunks mine_acc their_acc =
+  let rec buffer_changes temp_mine temp_their hunks =
     match hunks with
-    | [] -> (temp_mine, temp_their, mine_hunk_length, their_hunk_length, hunks)
-    | `Common _ :: _ ->
-        ( temp_mine,
-          temp_their,
-          mine_hunk_length + 1,
-          their_hunk_length + 1,
-          hunks )
+    | [] -> (temp_mine, temp_their, hunks)
+    | `Common _ :: _ -> (temp_mine, temp_their, hunks)
     | `Mine line :: t ->
-        buffer_changes
-          (Change (Mine, line) :: temp_mine)
-          temp_their (mine_hunk_length + 1) their_hunk_length t
+        buffer_changes (Change (Mine, line) :: temp_mine) temp_their t
     | `Their line :: t ->
-        buffer_changes temp_mine
-          (Change (Their, line) :: temp_their)
-          mine_hunk_length (their_hunk_length + 1) t
+        buffer_changes temp_mine (Change (Their, line) :: temp_their) t
   in
-
-  let append_balanced temp_mine temp_their mine_hunk_length their_hunk_length =
-    let rec fill_empty lst n =
-      if n <= 0 then lst else fill_empty (Empty :: lst) (n - 1)
-    in
+  let append_balanced temp_mine temp_their =
     let mine_len = List.length temp_mine in
     let their_len = List.length temp_their in
-    if mine_len > their_len then
-      let empty_their = fill_empty [] (mine_len - their_len) in
-      ( List.rev temp_mine,
-        List.rev (empty_their @ temp_their),
-        mine_hunk_length,
-        their_hunk_length )
-    else if their_len > mine_len then
-      let empty_mine = fill_empty [] (their_len - mine_len) in
-      ( List.rev (empty_mine @ temp_mine),
-        List.rev temp_their,
-        mine_hunk_length,
-        their_hunk_length )
-    else
-      ( List.rev temp_mine,
-        List.rev temp_their,
-        mine_hunk_length,
-        their_hunk_length )
-  in
+    let fill_empty n = List.init n (fun _ -> Empty) in
 
+    (* Determine the length difference and apply the empty list accordingly *)
+    let diff = mine_len - their_len in
+    let empty_list = fill_empty (abs diff) in
+
+    (* Append the empty list to the shorter one.
+       Note that we need to reverse the list so that the function
+       'line_with_numbers' can display the lines with the correct
+       alignment. *)
+    if diff > 0 then (List.rev temp_mine, List.rev (empty_list @ temp_their))
+    else if diff < 0 then
+      (List.rev (empty_list @ temp_mine), List.rev temp_their)
+    else (List.rev temp_mine, List.rev temp_their)
+  in
   match hunks with
-  | [] ->
-      ( List.rev mine_acc,
-        List.rev their_acc,
-        mine_hunk_length,
-        their_hunk_length )
+  | [] -> (List.rev mine_acc, List.rev their_acc)
   | _ -> (
-      let ( temp_mine,
-            temp_their,
-            new_mine_hunk_length,
-            new_their_hunk_length,
-            remaining_hunks ) =
-        buffer_changes [] [] mine_hunk_length their_hunk_length hunks
-      in
-      let ( balanced_mine,
-            balanced_their,
-            final_mine_hunk_length,
-            final_their_hunk_length ) =
-        append_balanced temp_mine temp_their new_mine_hunk_length
-          new_their_hunk_length
+      let temp_mine, temp_their, remaining_hunks = buffer_changes [] [] hunks in
+      let balanced_mine, balanced_their =
+        append_balanced temp_mine temp_their
       in
       let updated_mine_acc = List.rev_append balanced_mine mine_acc in
       let updated_their_acc = List.rev_append balanced_their their_acc in
@@ -197,24 +160,20 @@ let rec split_and_align_hunk hunks mine_acc their_acc mine_hunk_length
           let common_mine_acc = Common line :: updated_mine_acc in
           let common_their_acc = Common line :: updated_their_acc in
           split_and_align_hunk t common_mine_acc common_their_acc
-            final_mine_hunk_length final_their_hunk_length
       | _ ->
           split_and_align_hunk remaining_hunks updated_mine_acc
-            updated_their_acc final_mine_hunk_length final_their_hunk_length)
+            updated_their_acc)
 
-let lines_with_numbers lines attr_change line_num prefix =
+let lines_with_numbers lines attr_change prefix =
+  let line_num = ref 0 in
   List.fold_left
     (fun acc line ->
       match line with
       | Common s ->
-          line_num := !line_num + 1;
+          incr line_num;
           let content = Printf.sprintf "%3d   %s" !line_num s in
           (content, Notty.A.empty) :: acc
-      | Change (Mine, s) ->
-          incr line_num;
-          let content = Printf.sprintf "%3d %s %s" !line_num prefix s in
-          (content, attr_change) :: acc
-      | Change (Their, s) ->
+      | Change (Mine, s) | Change (Their, s) ->
           incr line_num;
           let content = Printf.sprintf "%3d %s %s" !line_num prefix s in
           (content, attr_change) :: acc
@@ -234,34 +193,22 @@ let create_summary start_line_num hunk_length attr change_type =
   else Some (W.string ~attr (Printf.sprintf "@@ %s0,0 @@" sign))
 
 let ui_of_hunk_side_by_side hunk =
-  let mine_line_num = hunk.Patch.mine_start in
-  let their_line_num = hunk.Patch.their_start in
-
-  let their_hunk_length = 0 and mine_hunk_length = 0 in
-
   let attr_mine = Notty.A.(fg red ++ st bold) in
   let attr_their = Notty.A.(fg green ++ st bold) in
 
-  let mine_lines, their_lines, mine_hunk_length, their_hunk_length =
-    split_and_align_hunk hunk.Patch.lines [] [] mine_hunk_length
-      their_hunk_length
-  in
+  let mine_lines, their_lines = split_and_align_hunk hunk.Patch.lines [] [] in
 
-  let content_mine =
-    lines_with_numbers mine_lines attr_mine (ref mine_line_num) "-"
-  in
-  let content_their =
-    lines_with_numbers their_lines attr_their (ref their_line_num) "+"
-  in
+  let content_mine = lines_with_numbers mine_lines attr_mine "-" in
+  let content_their = lines_with_numbers their_lines attr_their "+" in
   let summary_mine =
     create_summary
       (hunk.Patch.mine_start + 1)
-      mine_hunk_length attr_mine `Remove
+      hunk.Patch.mine_len attr_mine `Remove
   in
   let summary_their =
     create_summary
       (hunk.Patch.their_start + 1)
-      their_hunk_length attr_their `Add
+      hunk.Patch.their_len attr_their `Add
   in
 
   let space = Ui.space 1 0 in

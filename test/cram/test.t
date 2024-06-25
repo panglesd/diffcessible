@@ -139,8 +139,8 @@ This is a cram test for the new executable.
   2 additions, 1 removal
   Modification of file.txt
   @@ -2,1 @@                                                                  @@ +2,2 @@
-    2 - Hi everyone!                                                            2 + Hello World!
-                                                                                3 + This is the diffcessible project.
+    1 - Hi everyone!                                                            1 + Hello World!
+                                                                                2 + This is the diffcessible project.
   
   
   
@@ -161,8 +161,8 @@ This is a cram test for the new executable.
   2 additions, 1 removal
   Modification of file.txt
   @@ -3,1 @@                                                                  @@ +5,2 @@
-    3 - This file starts at line 3.                                             5 + This file starts at line 5.
-                                                                                6 + This is the second test case in this file.
+    1 - This file starts at line 3.                                             1 + This file starts at line 5.
+                                                                                2 + This is the second test case in this file.
   
   
   
@@ -183,8 +183,8 @@ This is a cram test for the new executable.
   2 additions, 1 removal
   Modification of file.txt
   @@ -3,1 @@                                                                  @@ +5,2 @@
-    3 - This file starts at line 3.                                             5 + This file starts at line 5.
-                                                                                6 + This is the second test case in this file.
+    1 - This file starts at line 3.                                             1 + This file starts at line 5.
+                                                                                2 + This is the second test case in this file.
   
   
   

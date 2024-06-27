@@ -115,44 +115,98 @@ let toggle_view_mode () =
   | Normal -> Lwd.set view_mode SideBySide
   | SideBySide -> Lwd.set view_mode Normal
 
+type line = Change of string | Common of string | Empty
+
 let rec split_and_align_hunk hunks mine_acc their_acc =
+  let rec buffer_changes temp_mine temp_their hunks =
+    match hunks with
+    | [] -> (temp_mine, temp_their, hunks)
+    | `Common _ :: _ -> (temp_mine, temp_their, hunks)
+    | `Mine line :: t -> buffer_changes (Change line :: temp_mine) temp_their t
+    | `Their line :: t -> buffer_changes temp_mine (Change line :: temp_their) t
+  in
+  let append_balanced temp_mine temp_their =
+    let mine_len = List.length temp_mine in
+    let their_len = List.length temp_their in
+    let fill_empty n = List.init n (fun _ -> Empty) in
+
+    let diff = mine_len - their_len in
+    let empty_list = fill_empty (abs diff) in
+
+    if diff > 0 then (temp_mine, empty_list @ temp_their)
+    else if diff < 0 then (empty_list @ temp_mine, temp_their)
+    else (temp_mine, temp_their)
+  in
+
   match hunks with
   | [] -> (List.rev mine_acc, List.rev their_acc)
-  | (`Common _ as common) :: t ->
-      split_and_align_hunk t (common :: mine_acc) (common :: their_acc)
-  | `Mine s :: `Their s' :: t ->
-      split_and_align_hunk t (`Mine s :: mine_acc) (`Their s' :: their_acc)
-  | `Mine s :: t ->
-      split_and_align_hunk t (`Mine s :: mine_acc) (`Common "" :: their_acc)
-  | `Their s :: t ->
-      split_and_align_hunk t (`Common "" :: mine_acc) (`Their s :: their_acc)
-
-let lines_to_ui lines attr_change =
-  List.map
-    (fun line ->
-      let content, attr =
-        match line with
-        | `Common s -> (s, Notty.A.empty)
-        | `Mine s -> (s, attr_change)
-        | `Their s -> (s, attr_change)
+  | _ -> (
+      let temp_mine, temp_their, remaining_hunks = buffer_changes [] [] hunks in
+      let balanced_mine, balanced_their =
+        append_balanced temp_mine temp_their
       in
-      W.string ~attr content)
-    lines
+      let updated_mine_acc = balanced_mine @ mine_acc in
+      let updated_their_acc = balanced_their @ their_acc in
+      match remaining_hunks with
+      | `Common line :: t ->
+          let common_mine_acc = Common line :: updated_mine_acc in
+          let common_their_acc = Common line :: updated_their_acc in
+          split_and_align_hunk t common_mine_acc common_their_acc
+      | _ ->
+          split_and_align_hunk remaining_hunks updated_mine_acc
+            updated_their_acc)
+
+let lines_with_numbers lines attr_change prefix =
+  let line_num = ref 0 in
+  List.fold_left
+    (fun acc line ->
+      match line with
+      | Common s ->
+          incr line_num;
+          let content = Printf.sprintf "%3d   %s" !line_num s in
+          (content, Notty.A.empty) :: acc
+      | Change s ->
+          incr line_num;
+          let content = Printf.sprintf "%3d %s %s" !line_num prefix s in
+          (content, attr_change) :: acc
+      | Empty ->
+          let content = Printf.sprintf "      " in
+          (content, Notty.A.empty) :: acc)
+    [] lines
+  |> List.rev
+  |> List.map (fun (content, attr) -> W.string ~attr content)
+
+let create_summary start_line_num hunk_length attr change_type =
+  let sign = match change_type with `Add -> "+" | `Remove -> "-" in
+  if hunk_length > 0 then
+    W.string ~attr
+      (Printf.sprintf "@@ %s%d,%d @@" sign start_line_num hunk_length)
+  else W.string ~attr (Printf.sprintf "@@ %s0,0 @@" sign)
 
 let ui_of_hunk_side_by_side hunk =
-  let mine_lines, their_lines = split_and_align_hunk hunk.Patch.lines [] [] in
-
   let attr_mine = Notty.A.(fg red ++ st bold) in
   let attr_their = Notty.A.(fg green ++ st bold) in
 
-  let mine_ui = lines_to_ui mine_lines attr_mine in
-  let their_ui = lines_to_ui their_lines attr_their in
+  let mine_lines, their_lines = split_and_align_hunk hunk.Patch.lines [] [] in
+
+  let content_mine = lines_with_numbers mine_lines attr_mine "-" in
+  let content_their = lines_with_numbers their_lines attr_their "+" in
+  let summary_mine =
+    create_summary
+      (hunk.Patch.mine_start + 1)
+      hunk.Patch.mine_len attr_mine `Remove
+  in
+  let summary_their =
+    create_summary
+      (hunk.Patch.their_start + 1)
+      hunk.Patch.their_len attr_their `Add
+  in
   let space = Ui.space 1 0 in
   Ui.hcat
     [
-      Ui.resize ~w:0 ~sw:2 (Ui.vcat mine_ui);
+      Ui.resize ~w:0 ~sw:2 (Ui.vcat (summary_mine :: content_mine));
       space;
-      Ui.resize ~w:0 ~sw:2 (Ui.vcat their_ui);
+      Ui.resize ~w:0 ~sw:2 (Ui.vcat (summary_their :: content_their));
     ]
 
 let current_hunks_side_by_side z_patches : ui Lwd.t =

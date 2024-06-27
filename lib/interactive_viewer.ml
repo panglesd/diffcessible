@@ -115,37 +115,29 @@ let toggle_view_mode () =
   | Normal -> Lwd.set view_mode SideBySide
   | SideBySide -> Lwd.set view_mode Normal
 
-type line = Change of change_origin * string | Common of string | Empty
-and change_origin = Mine | Their
+type line = Change of string | Common of string | Empty
 
 let rec split_and_align_hunk hunks mine_acc their_acc =
   let rec buffer_changes temp_mine temp_their hunks =
     match hunks with
     | [] -> (temp_mine, temp_their, hunks)
     | `Common _ :: _ -> (temp_mine, temp_their, hunks)
-    | `Mine line :: t ->
-        buffer_changes (Change (Mine, line) :: temp_mine) temp_their t
-    | `Their line :: t ->
-        buffer_changes temp_mine (Change (Their, line) :: temp_their) t
+    | `Mine line :: t -> buffer_changes (Change line :: temp_mine) temp_their t
+    | `Their line :: t -> buffer_changes temp_mine (Change line :: temp_their) t
   in
   let append_balanced temp_mine temp_their =
     let mine_len = List.length temp_mine in
     let their_len = List.length temp_their in
     let fill_empty n = List.init n (fun _ -> Empty) in
 
-    (* Determine the length difference and apply the empty list accordingly *)
     let diff = mine_len - their_len in
     let empty_list = fill_empty (abs diff) in
 
-    (* Append the empty list to the shorter one.
-       Note that we need to reverse the list so that the function
-       'line_with_numbers' can display the lines with the correct
-       alignment. *)
-    if diff > 0 then (List.rev temp_mine, List.rev (empty_list @ temp_their))
-    else if diff < 0 then
-      (List.rev (empty_list @ temp_mine), List.rev temp_their)
-    else (List.rev temp_mine, List.rev temp_their)
+    if diff > 0 then (temp_mine, empty_list @ temp_their)
+    else if diff < 0 then (empty_list @ temp_mine, temp_their)
+    else (temp_mine, temp_their)
   in
+
   match hunks with
   | [] -> (List.rev mine_acc, List.rev their_acc)
   | _ -> (
@@ -153,8 +145,8 @@ let rec split_and_align_hunk hunks mine_acc their_acc =
       let balanced_mine, balanced_their =
         append_balanced temp_mine temp_their
       in
-      let updated_mine_acc = List.rev_append balanced_mine mine_acc in
-      let updated_their_acc = List.rev_append balanced_their their_acc in
+      let updated_mine_acc = balanced_mine @ mine_acc in
+      let updated_their_acc = balanced_their @ their_acc in
       match remaining_hunks with
       | `Common line :: t ->
           let common_mine_acc = Common line :: updated_mine_acc in
@@ -173,7 +165,7 @@ let lines_with_numbers lines attr_change prefix =
           incr line_num;
           let content = Printf.sprintf "%3d   %s" !line_num s in
           (content, Notty.A.empty) :: acc
-      | Change (Mine, s) | Change (Their, s) ->
+      | Change s ->
           incr line_num;
           let content = Printf.sprintf "%3d %s %s" !line_num prefix s in
           (content, attr_change) :: acc
@@ -187,10 +179,9 @@ let lines_with_numbers lines attr_change prefix =
 let create_summary start_line_num hunk_length attr change_type =
   let sign = match change_type with `Add -> "+" | `Remove -> "-" in
   if hunk_length > 0 then
-    Some
-      (W.string ~attr
-         (Printf.sprintf "@@ %s%d,%d @@" sign start_line_num hunk_length))
-  else Some (W.string ~attr (Printf.sprintf "@@ %s0,0 @@" sign))
+    W.string ~attr
+      (Printf.sprintf "@@ %s%d,%d @@" sign start_line_num hunk_length)
+  else W.string ~attr (Printf.sprintf "@@ %s0,0 @@" sign)
 
 let ui_of_hunk_side_by_side hunk =
   let attr_mine = Notty.A.(fg red ++ st bold) in
@@ -210,15 +201,12 @@ let ui_of_hunk_side_by_side hunk =
       (hunk.Patch.their_start + 1)
       hunk.Patch.their_len attr_their `Add
   in
-
   let space = Ui.space 1 0 in
   Ui.hcat
     [
-      Ui.resize ~w:0 ~sw:2
-        (Ui.vcat (Option.to_list summary_mine @ content_mine));
+      Ui.resize ~w:0 ~sw:2 (Ui.vcat (summary_mine :: content_mine));
       space;
-      Ui.resize ~w:0 ~sw:2
-        (Ui.vcat (Option.to_list summary_their @ content_their));
+      Ui.resize ~w:0 ~sw:2 (Ui.vcat (summary_their :: content_their));
     ]
 
 let current_hunks_side_by_side z_patches : ui Lwd.t =

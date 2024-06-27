@@ -38,7 +38,7 @@ dune exec diffcessible [path/to/git.diff]
 
 The following is a list of the technologies used in the project:
 
-- [**Patch Library**](https://github.com/hannesm/patch): For parsing and printing diffs.https://github.com/let-def/lwd
+- [**Patch Library**](https://github.com/hannesm/patch): For parsing and printing diffs.
 - **[Notty](https://github.com/pqwy/notty/) & [Lwd](https://github.com/let-def/lwd) Libraries**: For terminal layout declaration and creating a reactive UI.
 - **[Nottui Library](https://github.com/let-def/lwd/tree/master/lib/nottui)**: Integrates Lwd and Notty for UI development.
 - **[Cmdliner Library](https://github.com/dbuenzli/cmdliner)**: Facilitates command-line interface creation.

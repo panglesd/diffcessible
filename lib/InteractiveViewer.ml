@@ -1,7 +1,7 @@
 open Nottui
 module W = Nottui_widgets
 open Lwd_infix
-
+open HelpView
 (* Summary of operations *)
 
 let operation_info z_patches : ui Lwd.t =
@@ -63,7 +63,6 @@ let navigate z_patches (dir : direction) : unit =
   | Next -> Lwd.set z_patches (Zipper.next z)
 
 let quit = Lwd.var false
-let help = Lwd.var false
 
 let additions_and_removals lines =
   let add_line (additions, removals) line =
@@ -274,18 +273,6 @@ let current_hunks_side_by_side z_patches : ui Lwd.t =
 (** end of side by side diff view implementation **)
 
 let view (patches : Patch.t list) =
-  let help_panel =
-    Ui.vcat
-      [
-        W.string "Help Panel:\n";
-        W.string "h:   Open the help panel";
-        W.string "q:   Quit the diffcessible viewer";
-        W.string "n:   Move to the next operation, if present";
-        W.string "p:   Move to the previous operation, if present";
-        W.string "t:   Toggle view mode";
-        W.string "l:   Toggle line numbers";
-      ]
-  in
   let z_patches : 'a Zipper.t Lwd.var =
     match Zipper.zipper_of_list patches with
     | Some z -> Lwd.var z
@@ -305,16 +292,18 @@ let view (patches : Patch.t list) =
     else Lwd.set curr_scroll_state state
   in
   let ui =
-    let$* help_visible = Lwd.get help in
+    let$* help_visible = Lwd.get help_visible in
     if help_visible then
       W.vbox
         [
           W.scrollbox @@ Lwd.pure @@ help_panel;
+          (* Scrollable help panel *)
           Lwd.pure
           @@ Ui.keyboard_area
                (function
                  | `ASCII 'q', [] ->
-                     Lwd.set help false;
+                     toggle_help_visibility ();
+                     (* Correct variable name *)
                      `Handled
                  | _ -> `Unhandled)
                (W.string "Type 'q' to exit the help panel");
@@ -341,7 +330,7 @@ let view (patches : Patch.t list) =
                      navigate z_patches Prev;
                      `Handled
                  | `ASCII 'h', [] ->
-                     Lwd.set help true;
+                     toggle_help_visibility ();
                      `Handled
                  | `ASCII 't', [] ->
                      toggle_view_mode ();

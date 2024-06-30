@@ -2,6 +2,8 @@ open Nottui
 module W = Nottui_widgets
 open Lwd_infix
 
+(* Summary of operations *)
+
 let operation_info z_patches : ui Lwd.t =
   let$ z = Lwd.get z_patches in
   let p = Zipper.get_focus z in
@@ -47,18 +49,10 @@ let ui_of_operation operation =
       Ui.hcat
         [ W.string "Modification of "; W.string ~attr:blue_bold_attr path ]
 
-let string_of_hunk = Format.asprintf "%a" Patch.pp_hunk
-
 let current_operation z_patches : ui Lwd.t =
   let$ z = Lwd.get z_patches in
   let p = Zipper.get_focus z in
   ui_of_operation p.Patch.operation
-
-let current_hunks z_patches : ui Lwd.t =
-  let$ z = Lwd.get z_patches in
-  let p = Zipper.get_focus z in
-  let hunks = List.map (fun h -> W.string (string_of_hunk h)) p.Patch.hunks in
-  Ui.vcat @@ hunks
 
 type direction = Prev | Next
 
@@ -103,6 +97,68 @@ let change_summary z_patches : ui Lwd.t =
       (format_plural total_removals "removal" "removals")
   in
   W.string ~attr:Notty.A.(fg lightcyan) operation_count
+
+(* Implementation of Single View Mode *)
+
+let ui_hunk_summary hunk =
+  let mine_info =
+    if hunk.Patch.mine_len = 0 then "0,0"
+    else Printf.sprintf "%d,%d" (hunk.Patch.mine_start + 1) hunk.Patch.mine_len
+  in
+  let their_info =
+    if hunk.Patch.their_len = 0 then "0,0"
+    else
+      Printf.sprintf "%d,%d" (hunk.Patch.their_start + 1) hunk.Patch.their_len
+  in
+  let mine_summary =
+    W.string ~attr:Notty.A.(fg red) (Printf.sprintf "-%s" mine_info)
+  in
+  let their_summary =
+    W.string ~attr:Notty.A.(fg green) (Printf.sprintf "+%s" their_info)
+  in
+  let at_symbols = W.string ~attr:Notty.A.(fg lightblue) "@@" in
+  Ui.hcat
+    [
+      at_symbols;
+      W.string " ";
+      mine_summary;
+      W.string " ";
+      their_summary;
+      W.string " ";
+      at_symbols;
+    ]
+
+let ui_unified_diff hunk =
+  let their_line_num = ref hunk.Patch.their_start in
+  let mine_line_num = ref hunk.Patch.mine_start in
+  let lines_ui =
+    List.map
+      (function
+        | `Common line ->
+            incr their_line_num;
+            incr mine_line_num;
+            W.string ~attr:Notty.A.empty
+              (Printf.sprintf "%2d %2d   %s" !mine_line_num !their_line_num line)
+        | `Their line ->
+            incr their_line_num;
+            W.string
+              ~attr:Notty.A.(fg green)
+              (Printf.sprintf "   %2d + %s" !their_line_num line)
+        | `Mine line ->
+            incr mine_line_num;
+            W.string
+              ~attr:Notty.A.(fg red)
+              (Printf.sprintf "%2d    - %s" !mine_line_num line))
+      hunk.Patch.lines
+    |> Ui.vcat
+  in
+  Ui.vcat [ ui_hunk_summary hunk; lines_ui ]
+
+let current_hunks z_patches : ui Lwd.t =
+  let$ z = Lwd.get z_patches in
+  let p = Zipper.get_focus z in
+  let hunks = List.map ui_unified_diff p.Patch.hunks in
+  Ui.vcat hunks
 
 (** Side by side diff view implementation **)
 
@@ -300,6 +356,8 @@ let view (patches : Patch.t list) =
   W.vbox [ ui ]
 
 let start patch = Ui_loop.run ~quit ~tick_period:0.2 (view patch)
+
+(* Tests *)
 
 let start_test patch events width height =
   let convert_char_to_key (c : char) : Ui.key = (`ASCII c, []) in

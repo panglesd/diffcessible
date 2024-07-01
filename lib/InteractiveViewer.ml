@@ -72,7 +72,8 @@ let view (patches : Patch.t list) =
   in
   W.vbox [ ui ]
 
-let start patch = Ui_loop.run ~quit:PatchNavigation.quit ~tick_period:0.2 (view patch)
+let start patch =
+  Ui_loop.run ~quit:PatchNavigation.quit ~tick_period:0.2 (view patch)
 
 (* Tests *)
 

@@ -37,20 +37,25 @@ let ui_unified_diff hunk =
 
   let update_lines (mine_line_num, their_line_num) = function
     | `Common line ->
-        (mine_line_num + 1, their_line_num + 1),
-        W.string ~attr:Notty.A.empty
-          (Printf.sprintf "%2d %2d   %s" (mine_line_num + 1) (their_line_num + 1) line)
+        ( (mine_line_num + 1, their_line_num + 1),
+          W.string ~attr:Notty.A.empty
+            (Printf.sprintf "%2d %2d   %s" (mine_line_num + 1)
+               (their_line_num + 1) line) )
     | `Their line ->
-        (mine_line_num, their_line_num + 1),
-        W.string ~attr:Notty.A.(fg green)
-          (Printf.sprintf "   %2d + %s" (their_line_num + 1) line)
+        ( (mine_line_num, their_line_num + 1),
+          W.string
+            ~attr:Notty.A.(fg green)
+            (Printf.sprintf "   %2d + %s" (their_line_num + 1) line) )
     | `Mine line ->
-        (mine_line_num + 1, their_line_num),
-        W.string ~attr:Notty.A.(fg red)
-          (Printf.sprintf "%2d    - %s" (mine_line_num + 1) line)
+        ( (mine_line_num + 1, their_line_num),
+          W.string
+            ~attr:Notty.A.(fg red)
+            (Printf.sprintf "%2d    - %s" (mine_line_num + 1) line) )
   in
   (* _ is the final state of the lines, if needed later *)
-  let _, lines_ui = List.fold_left_map update_lines initial_line_nums hunk.Patch.lines in 
+  let _, lines_ui =
+    List.fold_left_map update_lines initial_line_nums hunk.Patch.lines
+  in
   let lines_ui_vcat = Ui.vcat lines_ui in
 
   Ui.vcat [ ui_hunk_summary hunk; lines_ui_vcat ]

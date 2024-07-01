@@ -33,30 +33,27 @@ let ui_hunk_summary hunk =
     ]
 
 let ui_unified_diff hunk =
-  let their_line_num = ref hunk.Patch.their_start in
-  let mine_line_num = ref hunk.Patch.mine_start in
-  let lines_ui =
-    List.map
-      (function
-        | `Common line ->
-            incr their_line_num;
-            incr mine_line_num;
-            W.string ~attr:Notty.A.empty
-              (Printf.sprintf "%2d %2d   %s" !mine_line_num !their_line_num line)
-        | `Their line ->
-            incr their_line_num;
-            W.string
-              ~attr:Notty.A.(fg green)
-              (Printf.sprintf "   %2d + %s" !their_line_num line)
-        | `Mine line ->
-            incr mine_line_num;
-            W.string
-              ~attr:Notty.A.(fg red)
-              (Printf.sprintf "%2d    - %s" !mine_line_num line))
-      hunk.Patch.lines
-    |> Ui.vcat
+  let initial_line_nums = (hunk.Patch.mine_start, hunk.Patch.their_start) in
+
+  let update_lines (mine_line_num, their_line_num) = function
+    | `Common line ->
+        (mine_line_num + 1, their_line_num + 1),
+        W.string ~attr:Notty.A.empty
+          (Printf.sprintf "%2d %2d   %s" (mine_line_num + 1) (their_line_num + 1) line)
+    | `Their line ->
+        (mine_line_num, their_line_num + 1),
+        W.string ~attr:Notty.A.(fg green)
+          (Printf.sprintf "   %2d + %s" (their_line_num + 1) line)
+    | `Mine line ->
+        (mine_line_num + 1, their_line_num),
+        W.string ~attr:Notty.A.(fg red)
+          (Printf.sprintf "%2d    - %s" (mine_line_num + 1) line)
   in
-  Ui.vcat [ ui_hunk_summary hunk; lines_ui ]
+  (* _ is the final state of the lines, if needed later *)
+  let _, lines_ui = List.fold_left_map update_lines initial_line_nums hunk.Patch.lines in 
+  let lines_ui_vcat = Ui.vcat lines_ui in
+
+  Ui.vcat [ ui_hunk_summary hunk; lines_ui_vcat ]
 
 let current_hunks z_patches : ui Lwd.t =
   let$ z = Lwd.get z_patches in

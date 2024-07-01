@@ -9,4 +9,3 @@ val start : Patch.t list -> unit
 (** [start patches] initializes and runs the main UI loop for the application, displaying the UI constructed by [view].
     @param patches A list of patches to be processed and displayed in the UI.
     @return Executes indefinitely, handling UI events until termination conditions are met (e.g., user quits). *)
-

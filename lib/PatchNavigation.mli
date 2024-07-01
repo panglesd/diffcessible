@@ -22,4 +22,3 @@ val change_summary : Patch.t Zipper.t Lwd.var -> Nottui.ui Lwd.t
     It shows the total number of additions and removals formatted in a readable format.
     @param z_patches A reactive variable containing a zipper of patches.
     @return A reactive UI element displaying the summary of changes. *)
-

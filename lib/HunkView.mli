@@ -29,12 +29,13 @@ val current_hunks_side_by_side : Patch.t Zipper.t Lwd.var -> Nottui.ui Lwd.t
     @param z_patches A reactive variable containing a zipper of patches.
     @return A reactive UI element listing all hunks in the current patch in side-by-side view. *)
 
-type view_mode = SideBySide | Normal
-(** Defines available view modes for displaying diffs: either side-by-side or as a unified view. *)
+type view_mode =
+  | SideBySide
+  | Normal
+      (** Defines available view modes for displaying diffs: either side-by-side or as a unified view. *)
 
 val view_mode : view_mode Lwd.var
 (** Holds the current view mode of the diff display. *)
 
 val toggle_view_mode : unit -> unit
 (** Toggles the current view mode between side-by-side and normal views. Updates the [view_mode] variable. *)
-

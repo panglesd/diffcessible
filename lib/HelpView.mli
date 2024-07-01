@@ -8,4 +8,3 @@ val help_panel : Nottui.ui
 
 val toggle_help_visibility : unit -> unit
 (** [toggle_help_visibility ()] toggles the visibility of the help panel. This function modifies the state of [help_visible], effectively showing or hiding the help panel based on its current state. *)
-

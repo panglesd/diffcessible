@@ -1,10 +1,6 @@
 open Nottui
 module W = Nottui_widgets
 open Lwd_infix
-open HelpView
-open HunkView
-open OperationView
-open PatchNavigation
 
 let view (patches : Patch.t list) =
   let z_patches : 'a Zipper.t Lwd.var =
@@ -13,10 +9,10 @@ let view (patches : Patch.t list) =
     | None -> failwith "zipper_of_list: empty list"
   in
   let hunks_ui =
-    Lwd.bind (Lwd.get view_mode) ~f:(fun mode ->
+    Lwd.bind (Lwd.get HunkView.view_mode) ~f:(fun mode ->
         match mode with
-        | Normal -> current_hunks z_patches
-        | SideBySide -> current_hunks_side_by_side z_patches)
+        | Normal -> HunkView.current_hunks z_patches
+        | SideBySide -> HunkView.current_hunks_side_by_side z_patches)
   in
   let curr_scroll_state = Lwd.var W.default_scroll_state in
   let change_scroll_state _action state =
@@ -26,16 +22,16 @@ let view (patches : Patch.t list) =
     else Lwd.set curr_scroll_state state
   in
   let ui =
-    let$* help_visible = Lwd.get help_visible in
+    let$* help_visible = Lwd.get HelpView.help_visible in
     if help_visible then
       W.vbox
         [
-          W.scrollbox @@ Lwd.pure @@ help_panel;
+          W.scrollbox @@ Lwd.pure @@ HelpView.help_panel;
           Lwd.pure
           @@ Ui.keyboard_area
                (function
                  | `ASCII 'q', [] ->
-                     toggle_help_visibility ();
+                     HelpView.toggle_help_visibility ();
                      `Handled
                  | _ -> `Unhandled)
                (W.string "Type 'q' to exit the help panel");
@@ -43,9 +39,9 @@ let view (patches : Patch.t list) =
     else
       W.vbox
         [
-          operation_info z_patches;
-          change_summary z_patches;
-          current_operation z_patches;
+          OperationView.operation_info z_patches;
+          PatchNavigation.change_summary z_patches;
+          OperationView.current_operation z_patches;
           W.vscroll_area
             ~state:(Lwd.get curr_scroll_state)
             ~change:change_scroll_state hunks_ui;
@@ -53,19 +49,19 @@ let view (patches : Patch.t list) =
           @@ Ui.keyboard_area
                (function
                  | `ASCII 'q', [] ->
-                     Lwd.set quit true;
+                     Lwd.set PatchNavigation.quit true;
                      `Handled
                  | `ASCII 'n', [] ->
-                     navigate z_patches Next;
+                     PatchNavigation.navigate z_patches PatchNavigation.Next;
                      `Handled
                  | `ASCII 'p', [] ->
-                     navigate z_patches Prev;
+                     PatchNavigation.navigate z_patches PatchNavigation.Prev;
                      `Handled
                  | `ASCII 'h', [] ->
-                     toggle_help_visibility ();
+                     HelpView.toggle_help_visibility ();
                      `Handled
                  | `ASCII 't', [] ->
-                     toggle_view_mode ();
+                     HunkView.toggle_view_mode ();
                      `Handled
                  | _ -> `Unhandled)
                (W.string
@@ -76,7 +72,7 @@ let view (patches : Patch.t list) =
   in
   W.vbox [ ui ]
 
-let start patch = Ui_loop.run ~quit ~tick_period:0.2 (view patch)
+let start patch = Ui_loop.run ~quit:PatchNavigation.quit ~tick_period:0.2 (view patch)
 
 (* Tests *)
 

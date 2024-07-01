@@ -1,8 +1,5 @@
 (** This module defines navigation and summary functions for viewing changes in a diff viewer application using the Nottui library. It provides utilities to navigate between patches, calculate additions and removals, and display summaries of these changes. *)
 
-module W = Nottui_widgets
-(** Module alias for Nottui_widgets for easier access to widget creation functions. *)
-
 type direction = Prev | Next
 (** Type representing navigation directions within a list of patches. 
     - [Prev] indicates navigation to the previous item.

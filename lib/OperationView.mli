@@ -1,8 +1,5 @@
 (** This module defines UI components for displaying information about operations in a diff viewer using the Nottui library. These components visualize different types of patch operations like creation, deletion, and edits. *)
 
-module W = Nottui_widgets
-(** Module alias for Nottui_widgets for easier access to widget creation functions. *)
-
 val operation_info : Patch.t Zipper.t Lwd.var -> Nottui.ui Lwd.t
 (** [operation_info z_patches] creates a reactive UI element that displays information about the current operation in a zipper of patches.
     It shows the current operation index, the total number of operations, and the number of hunks in the current patch.

@@ -1,8 +1,5 @@
 (** This module defines the main user interface and interaction logic for a diff viewer application using the Nottui library. It provides mechanisms to navigate through patches and view them in different formats, respond to user inputs, and run test simulations. *)
 
-module W = Nottui_widgets
-(** Module alias for Nottui_widgets for easier access to widget creation functions. *)
-
 val view : Patch.t list -> Nottui.ui Lwd.t
 (** [view patches] constructs a reactive UI for navigating and viewing a list of patches.
     It supports toggling between help view and normal view, and handling navigation commands.

@@ -1,15 +1,4 @@
 (** This module provides UI components and attributes for a help panel in a Nottui-based application. *)
-module W = Nottui_widgets
-(** Module alias for Nottui_widgets for easier access to widget creation functions. *)
-
-val header_color : Notty.attr
-(** [header_color] defines the Notty attribute for header texts in the help panel, characterized by a light red foreground and bold style. *)
-
-val action_color : Notty.attr
-(** [action_color] defines the Notty attribute for action items in the help panel, characterized by a green foreground. *)
-
-val info_color : Notty.attr
-(** [info_color] defines the Notty attribute for informational texts in the help panel, characterized by a yellow foreground. *)
 
 val help_visible : bool Lwd.var
 (** [help_visible] is a reactive variable indicating whether the help panel is currently visible. *)

@@ -1,8 +1,5 @@
 (** This module provides functionalities for rendering different views of hunks within a patch in a diff viewer application using the Nottui library. It supports both unified and side-by-side display of changes. *)
 
-module W = Nottui_widgets
-(** Module alias for Nottui_widgets for easier access to widget creation functions. *)
-
 val ui_hunk_summary : Patch.hunk -> Nottui.ui
 (** [ui_hunk_summary hunk] creates a UI representation of the summary for a single hunk.
     It displays the start and length of changes in both 'mine' and 'their' versions of the text.

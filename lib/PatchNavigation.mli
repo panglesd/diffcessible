@@ -1,7 +1,9 @@
 (** This module defines navigation and summary functions for viewing changes in a diff viewer application using the Nottui library. It provides utilities to navigate between patches, calculate additions and removals, and display summaries of these changes. *)
 
-type direction = Prev | Next
-(** Type representing navigation directions within a list of patches. 
+type direction =
+  | Prev
+  | Next
+      (** Type representing navigation directions within a list of patches. 
     - [Prev] indicates navigation to the previous item.
     - [Next] indicates navigation to the next item. *)
 
@@ -35,4 +37,3 @@ val change_summary : Patch.t Zipper.t Lwd.var -> Nottui.ui Lwd.t
     It shows the total number of additions and removals formatted in a readable format.
     @param z_patches A reactive variable containing a zipper of patches.
     @return A reactive UI element displaying the summary of changes. *)
-

@@ -17,4 +17,3 @@ val current_operation : Patch.t Zipper.t Lwd.var -> Nottui.ui Lwd.t
     This function integrates [ui_of_operation] to render the details of the operation at the current focus of the zipper.
     @param z_patches A reactive variable containing a zipper of patches.
     @return A reactive UI element that displays the details of the current operation based on the focus of the zipper. *)
-

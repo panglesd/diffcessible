@@ -19,4 +19,3 @@ val start_test : Patch.t list -> char list -> int -> int -> unit
     @param width The width of the rendering area in characters.
     @param height The height of the rendering area in characters.
     @return Outputs the resulting UI state to the terminal, providing visual feedback on the UI's response to the simulated events. *)
-

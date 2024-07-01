@@ -17,8 +17,10 @@ val current_hunks : Patch.t Zipper.t Lwd.var -> Nottui.ui Lwd.t
     @param z_patches A reactive variable containing a zipper of patches.
     @return A reactive UI element listing all hunks in the current patch. *)
 
-type view_mode = SideBySide | Normal
-(** Type that defines available view modes for displaying diffs: either side-by-side or as a unified list. *)
+type view_mode =
+  | SideBySide
+  | Normal
+      (** Type that defines available view modes for displaying diffs: either side-by-side or as a unified list. *)
 
 val view_mode : view_mode Lwd.var
 (** [view_mode] is a reactive variable that holds the current view mode of the diff display, allowing dynamic switching between view modes. *)
@@ -26,15 +28,20 @@ val view_mode : view_mode Lwd.var
 val toggle_view_mode : unit -> unit
 (** [toggle_view_mode ()] toggles the current view mode between side-by-side and normal views. This function updates the [view_mode] variable. *)
 
-type line = Change of string | Common of string | Empty
-(** Type representing a line in a diff view:
+type line =
+  | Change of string
+  | Common of string
+  | Empty
+      (** Type representing a line in a diff view:
     - [Change string] denotes a modified line.
     - [Common string] denotes an unchanged line.
     - [Empty] denotes a spacer line for alignment purposes in side-by-side views. *)
 
 val split_and_align_hunk :
   [< `Common of string | `Mine of string | `Their of string > `Common ] list ->
-  line list -> line list -> line list * line list
+  line list ->
+  line list ->
+  line list * line list
 (** [split_and_align_hunk hunks mine_acc their_acc] processes a list of lines from a hunk and aligns them for side-by-side display, balancing the line counts between two columns.
     @param hunks A list of lines tagged with their types (common, mine, or their).
     @param mine_acc An accumulator for 'mine' lines.
@@ -68,4 +75,3 @@ val current_hunks_side_by_side : Patch.t Zipper.t Lwd.var -> Nottui.ui Lwd.t
     This view aligns changes horizontally, allowing easier comparison of 'mine' and 'their' versions.
     @param z_patches A reactive variable containing a zipper of patches.
     @return A reactive UI element listing all hunks in the current patch in side-by-side view. *)
-

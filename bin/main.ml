@@ -5,7 +5,7 @@ let main file_path =
   let file = In_channel.open_bin file_path in
   let s = In_channel.input_all file in
   let patch = Patch.to_diffs s in
-  Interactive_viewer.start patch
+  InteractiveViewer.start patch
 
 let file_arg =
   let doc = "Path to the file containing the Git diff." in

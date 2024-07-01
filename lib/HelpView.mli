@@ -1,7 +1,7 @@
-(** This module provides UI components and attributes for a help panel in a Nottui-based application. *)
+(** This module provides UI components and attributes for a help panel. *)
 
 val help_visible : bool Lwd.var
-(** [help_visible] is a reactive variable indicating whether the help panel is currently visible. *)
+(** [help_visible] is a variable indicating whether the help panel is currently visible. *)
 
 val help_panel : Nottui.ui
 (** [help_panel] constructs the user interface for the help panel, containing various help commands with corresponding attributes. *)

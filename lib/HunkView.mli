@@ -20,10 +20,10 @@ val current_hunks : Patch.t Zipper.t Lwd.var -> Nottui.ui Lwd.t
 type view_mode =
   | SideBySide
   | Normal
-      (** Type that defines available view modes for displaying diffs: either side-by-side or as a unified list. *)
+      (** Type that defines available view modes for displaying diffs: either side-by-side or as a unified view. *)
 
 val view_mode : view_mode Lwd.var
-(** [view_mode] is a reactive variable that holds the current view mode of the diff display, allowing dynamic switching between view modes. *)
+(** [view_mode] is a variable that holds the current view mode of the diff display. *)
 
 val toggle_view_mode : unit -> unit
 (** [toggle_view_mode ()] toggles the current view mode between side-by-side and normal views. This function updates the [view_mode] variable. *)

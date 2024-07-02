@@ -33,28 +33,39 @@ let ui_hunk_summary hunk =
     ]
 
 let ui_unified_diff hunk =
-  let initial_line_nums = (hunk.Patch.mine_start, hunk.Patch.their_start) in
-
-  let update_lines (mine_line_num, their_line_num) = function
-    | `Common line ->
-        ( (mine_line_num + 1, their_line_num + 1),
-          W.string ~attr:Notty.A.empty
-            (Printf.sprintf "%2d %2d   %s" (mine_line_num + 1)
-               (their_line_num + 1) line) )
-    | `Their line ->
-        ( (mine_line_num, their_line_num + 1),
-          W.string
-            ~attr:Notty.A.(fg green)
-            (Printf.sprintf "   %2d + %s" (their_line_num + 1) line) )
-    | `Mine line ->
-        ( (mine_line_num + 1, their_line_num),
-          W.string
-            ~attr:Notty.A.(fg red)
-            (Printf.sprintf "%2d    - %s" (mine_line_num + 1) line) )
+  let rec process_lines mine_num their_num acc = function
+    | [] -> List.rev acc
+    | line :: rest ->
+        let new_mine, new_their, ui_element =
+          match line with
+          | `Common line ->
+              let ui =
+                W.string ~attr:Notty.A.empty
+                  (Printf.sprintf "%2d %2d   %s" (mine_num + 1) (their_num + 1)
+                     line)
+              in
+              (mine_num + 1, their_num + 1, ui)
+          | `Their line ->
+              let ui =
+                W.string
+                  ~attr:Notty.A.(fg green)
+                  (Printf.sprintf "   %2d + %s" (their_num + 1) line)
+              in
+              (mine_num, their_num + 1, ui)
+          | `Mine line ->
+              let ui =
+                W.string
+                  ~attr:Notty.A.(fg red)
+                  (Printf.sprintf "%2d    - %s" (mine_num + 1) line)
+              in
+              (mine_num + 1, their_num, ui)
+        in
+        process_lines new_mine new_their (ui_element :: acc) rest
   in
-  (* _ is the final state of the lines, if needed later *)
-  let _, lines_ui =
-    List.fold_left_map update_lines initial_line_nums hunk.Patch.lines
+
+  let lines_ui =
+    process_lines hunk.Patch.mine_start hunk.Patch.their_start []
+      hunk.Patch.lines
   in
   let lines_ui_vcat = Ui.vcat lines_ui in
 
@@ -79,64 +90,59 @@ let toggle_view_mode () =
 
 type line = Change of string | Common of string | Empty
 
-let rec split_and_align_hunk hunks mine_acc their_acc =
-  let rec buffer_changes temp_mine temp_their hunks =
-    match hunks with
-    | [] -> (temp_mine, temp_their, hunks)
-    | `Common _ :: _ -> (temp_mine, temp_their, hunks)
-    | `Mine line :: t -> buffer_changes (Change line :: temp_mine) temp_their t
-    | `Their line :: t -> buffer_changes temp_mine (Change line :: temp_their) t
+let split_and_align_hunk hunks =
+  let rec process_hunk mine_acc their_acc = function
+    | [] -> (List.rev mine_acc, List.rev their_acc)
+    | `Common line :: rest ->
+        process_hunk (Common line :: mine_acc) (Common line :: their_acc) rest
+    | changes ->
+        let rec buffer_changes mine their = function
+          | `Mine line :: rest ->
+              buffer_changes (Change line :: mine) their rest
+          | `Their line :: rest ->
+              buffer_changes mine (Change line :: their) rest
+          | remaining -> (List.rev mine, List.rev their, remaining)
+        in
+        let mine_changes, their_changes, rest = buffer_changes [] [] changes in
+        let max_len =
+          max (List.length mine_changes) (List.length their_changes)
+        in
+        let pad_and_append orig_acc changes =
+          let rec pad_append acc i =
+            if i < max_len then
+              if i < List.length changes then
+                pad_append (List.nth changes i :: acc) (i + 1)
+              else pad_append (Empty :: acc) (i + 1)
+            else acc
+          in
+          pad_append orig_acc 0
+        in
+        let new_mine_acc = pad_and_append mine_acc mine_changes in
+        let new_their_acc = pad_and_append their_acc their_changes in
+        process_hunk new_mine_acc new_their_acc rest
   in
-  let append_balanced temp_mine temp_their =
-    let mine_len = List.length temp_mine in
-    let their_len = List.length temp_their in
-    let fill_empty n = List.init n (fun _ -> Empty) in
-
-    let diff = mine_len - their_len in
-    let empty_list = fill_empty (abs diff) in
-
-    if diff > 0 then (temp_mine, empty_list @ temp_their)
-    else if diff < 0 then (empty_list @ temp_mine, temp_their)
-    else (temp_mine, temp_their)
-  in
-
-  match hunks with
-  | [] -> (List.rev mine_acc, List.rev their_acc)
-  | _ -> (
-      let temp_mine, temp_their, remaining_hunks = buffer_changes [] [] hunks in
-      let balanced_mine, balanced_their =
-        append_balanced temp_mine temp_their
-      in
-      let updated_mine_acc = balanced_mine @ mine_acc in
-      let updated_their_acc = balanced_their @ their_acc in
-      match remaining_hunks with
-      | `Common line :: t ->
-          let common_mine_acc = Common line :: updated_mine_acc in
-          let common_their_acc = Common line :: updated_their_acc in
-          split_and_align_hunk t common_mine_acc common_their_acc
-      | _ ->
-          split_and_align_hunk remaining_hunks updated_mine_acc
-            updated_their_acc)
+  process_hunk [] [] hunks
 
 let lines_with_numbers lines attr_change prefix =
-  let line_num = ref 0 in
-  List.fold_left
-    (fun acc line ->
-      match line with
-      | Common s ->
-          incr line_num;
-          let content = Printf.sprintf "%3d   %s" !line_num s in
-          (content, Notty.A.empty) :: acc
-      | Change s ->
-          incr line_num;
-          let content = Printf.sprintf "%3d %s %s" !line_num prefix s in
-          (content, attr_change) :: acc
-      | Empty ->
-          let content = Printf.sprintf "      " in
-          (content, Notty.A.empty) :: acc)
-    [] lines
-  |> List.rev
-  |> List.map (fun (content, attr) -> W.string ~attr content)
+  let rec process_lines line_num acc = function
+    | [] -> List.rev acc
+    | line :: rest ->
+        let content, attr, next_num =
+          match line with
+          | Common s ->
+              let content = Printf.sprintf "%3d   %s" line_num s in
+              (content, Notty.A.empty, line_num + 1)
+          | Change s ->
+              let content = Printf.sprintf "%3d %s %s" line_num prefix s in
+              (content, attr_change, line_num + 1)
+          | Empty ->
+              let content = Printf.sprintf "      " in
+              (content, Notty.A.empty, line_num)
+        in
+        let new_acc = W.string ~attr content :: acc in
+        process_lines next_num new_acc rest
+  in
+  process_lines 1 [] lines
 
 let create_summary start_line_num hunk_length attr change_type =
   let sign = match change_type with `Add -> "+" | `Remove -> "-" in
@@ -149,7 +155,7 @@ let ui_of_hunk_side_by_side hunk =
   let attr_mine = Notty.A.(fg red ++ st bold) in
   let attr_their = Notty.A.(fg green ++ st bold) in
 
-  let mine_lines, their_lines = split_and_align_hunk hunk.Patch.lines [] [] in
+  let mine_lines, their_lines = split_and_align_hunk hunk.Patch.lines in
 
   let content_mine = lines_with_numbers mine_lines attr_mine "-" in
   let content_their = lines_with_numbers their_lines attr_their "+" in

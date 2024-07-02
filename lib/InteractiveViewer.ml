@@ -2,6 +2,11 @@ open Nottui
 module W = Nottui_widgets
 open Lwd_infix
 
+let help_visible = Lwd.var false
+
+let toggle_help_visibility () =
+  Lwd.set help_visible (not (Lwd.peek help_visible))
+
 let view (patches : Patch.t list) =
   let z_patches : 'a Zipper.t Lwd.var =
     match Zipper.zipper_of_list patches with
@@ -22,7 +27,7 @@ let view (patches : Patch.t list) =
     else Lwd.set curr_scroll_state state
   in
   let ui =
-    let$* help_visible = Lwd.get HelpView.help_visible in
+    let$* help_visible = Lwd.get help_visible in
     if help_visible then
       W.vbox
         [
@@ -31,7 +36,7 @@ let view (patches : Patch.t list) =
           @@ Ui.keyboard_area
                (function
                  | `ASCII 'q', [] ->
-                     HelpView.toggle_help_visibility ();
+                     toggle_help_visibility ();
                      `Handled
                  | _ -> `Unhandled)
                (W.string "Type 'q' to exit the help panel");
@@ -58,7 +63,7 @@ let view (patches : Patch.t list) =
                      PatchNavigation.navigate z_patches PatchNavigation.Prev;
                      `Handled
                  | `ASCII 'h', [] ->
-                     HelpView.toggle_help_visibility ();
+                     toggle_help_visibility ();
                      `Handled
                  | `ASCII 't', [] ->
                      HunkView.toggle_view_mode ();

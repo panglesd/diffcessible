@@ -3,17 +3,23 @@ open Cmdliner
 open ExtUnix.Specific
 
 let main file_path =
-  let file = match file_path with
-    | Some path -> In_channel.open_bin path
+  let input_channel, term = 
+    match file_path with
+    | Some path -> (In_channel.open_bin path, None)
     | None ->
-        let tty = ttyname Unix.stdin 
-  in In_channel.open_bin tty
-  in let s = In_channel.input_all file
-  in let patch = Patch.to_diffs s in
-  Interactive_viewer.start patch
+        let tty_path = ttyname Unix.stdout in
+        let tty_fd = Unix.openfile tty_path [Unix.O_RDWR] 0o500 in
+        let term = Notty_unix.Term.create ~output:tty_fd ~input:tty_fd () in
+        (In_channel.stdin, Some term)
+  in
+  let input_content = In_channel.input_all input_channel in
+  In_channel.close input_channel;
+  let patch = Patch.to_diffs input_content in
+  Interactive_viewer.start ?term patch;
+  (match term with Some t -> Notty_unix.Term.release t | None -> ())
 
 let file_arg =
-  let doc = "Path to the file containing the Git diff. If not provided, reads from the terminal." in
+  let doc = "Path to the file containing the Git diff. If not provided, reads from stdin." in
   Arg.(value & pos 0 (some string) None & info [] ~docv:"FILE" ~doc) 
 
 let cmd =

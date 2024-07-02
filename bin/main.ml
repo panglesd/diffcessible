@@ -8,7 +8,7 @@ let main file_path =
     | Some path -> (In_channel.open_bin path, None)
     | None ->
         let tty_path = ttyname Unix.stdout in
-        let tty_fd = Unix.openfile tty_path [ Unix.O_RDWR ] 0o500 in
+        let tty_fd = Unix.openfile tty_path [ Unix.O_RDWR ] 0o600 in
         let term = Notty_unix.Term.create ~output:tty_fd ~input:tty_fd () in
         (In_channel.stdin, Some term)
   in

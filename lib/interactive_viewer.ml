@@ -299,7 +299,7 @@ let view (patches : Patch.t list) =
   in
   W.vbox [ ui ]
 
-let start patch = Ui_loop.run ~quit ~tick_period:0.2 (view patch)
+let start ?term patch = Ui_loop.run ?term ~quit ~tick_period:0.2 (view patch)
 
 let start_test patch events width height =
   let convert_char_to_key (c : char) : Ui.key = (`ASCII c, []) in

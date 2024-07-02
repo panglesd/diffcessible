@@ -2,21 +2,42 @@ open Diffcessible
 open Cmdliner
 open ExtUnix.Specific
 
+let create_empty_diff_content () =
+  "diff --git a/Error b/Error\n--- a/Error\n+++ b/Error\n"
+
+let setup_input = function
+  | Some path ->
+      if not (Sys.file_exists path) then failwith ("File not found: " ^ path);
+      let ic = In_channel.open_bin path in
+      (Some ic, Notty_unix.Term.create ())
+  | None ->
+      let tty_path = ttyname Unix.stdout in
+      let tty_fd = Unix.openfile tty_path [ Unix.O_RDWR ] 0o600 in
+      let term = Notty_unix.Term.create ~input:tty_fd ~output:tty_fd () in
+      if not (Unix.isatty Unix.stdin) then (Some In_channel.stdin, term)
+      else (None, term)
+
+let safe_read_input ic =
+  try
+    let content = In_channel.input_all ic in
+    In_channel.close ic;
+    content
+  with _ ->
+    In_channel.close ic;
+    create_empty_diff_content ()
+
 let main file_path =
-  let input_channel, term =
-    match file_path with
-    | Some path -> (In_channel.open_bin path, None)
-    | None ->
-        let tty_path = ttyname Unix.stdout in
-        let tty_fd = Unix.openfile tty_path [ Unix.O_RDWR ] 0o600 in
-        let term = Notty_unix.Term.create ~output:tty_fd ~input:tty_fd () in
-        (In_channel.stdin, Some term)
+  let ic_opt, term = setup_input file_path in
+  let input_content =
+    match ic_opt with
+    | None -> create_empty_diff_content ()
+    | Some ic -> safe_read_input ic
   in
-  let input_content = In_channel.input_all input_channel in
-  In_channel.close input_channel;
   let patch = Patch.to_diffs input_content in
-  Interactive_viewer.start ?term patch;
-  match term with Some t -> Notty_unix.Term.release t | None -> ()
+  Interactive_viewer.start ~term patch;
+  Notty_unix.Term.release term;
+  (* restore terminal to original state *)
+  Unix.tcsetattr Unix.stdin Unix.TCSANOW (Unix.tcgetattr Unix.stdin)
 
 let file_arg =
   let doc =

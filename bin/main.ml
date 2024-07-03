@@ -14,6 +14,7 @@ let setup_input = function
       let tty_path = ttyname Unix.stdout in
       let tty_fd = Unix.openfile tty_path [ Unix.O_RDWR ] 0o600 in
       let term = Notty_unix.Term.create ~input:tty_fd ~output:tty_fd () in
+      Unix.close tty_fd;
       if not (Unix.isatty Unix.stdin) then (Some In_channel.stdin, term)
       else (None, term)
 
@@ -31,13 +32,16 @@ let main file_path =
   let input_content =
     match ic_opt with
     | None -> create_empty_diff_content ()
-    | Some ic -> safe_read_input ic
+    | Some ic ->
+        if ic == In_channel.stdin then (
+          let content = safe_read_input ic in
+          In_channel.close ic;
+          content)
+        else safe_read_input ic
   in
   let patch = Patch.to_diffs input_content in
   Interactive_viewer.start ~term patch;
-  Notty_unix.Term.release term;
-  (* restore terminal to original state *)
-  Unix.tcsetattr Unix.stdin Unix.TCSANOW (Unix.tcgetattr Unix.stdin)
+  Notty_unix.Term.release term
 
 let file_arg =
   let doc =

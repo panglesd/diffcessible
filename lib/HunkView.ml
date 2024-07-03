@@ -4,7 +4,7 @@ open Lwd_infix
 
 (* Implementation of Single View Mode *)
 
-let ui_hunk_summary hunk =
+let ui_hunk_summary (hunk : Patch.hunk) : Nottui.ui =
   let mine_info =
     if hunk.Patch.mine_len = 0 then "0,0"
     else Printf.sprintf "%d,%d" (hunk.Patch.mine_start + 1) hunk.Patch.mine_len
@@ -32,8 +32,9 @@ let ui_hunk_summary hunk =
       at_symbols;
     ]
 
-let ui_unified_diff hunk =
-  let rec process_lines mine_num their_num acc = function
+let ui_unified_diff (hunk : Patch.hunk) : Nottui.ui =
+  let rec process_lines (mine_num : int) (their_num : int)
+      (acc : Nottui.ui list) = function
     | [] -> List.rev acc
     | line :: rest ->
         let new_mine, new_their, ui_element =
@@ -71,32 +72,22 @@ let ui_unified_diff hunk =
 
   Ui.vcat [ ui_hunk_summary hunk; lines_ui_vcat ]
 
-let current_hunks z_patches : ui Lwd.t =
-  let$ z = Lwd.get z_patches in
-  let p = Zipper.get_focus z in
+let current_hunks (z_patches : Patch.t Zipper.t) : Nottui.ui =
+  let p = Zipper.get_focus z_patches in
   let hunks = List.map ui_unified_diff p.Patch.hunks in
   Ui.vcat hunks
 
 (** Side by side diff view implementation **)
 
-type view_mode = SideBySide | Normal
-
-let view_mode = Lwd.var Normal
-
-let toggle_view_mode () =
-  match Lwd.peek view_mode with
-  | Normal -> Lwd.set view_mode SideBySide
-  | SideBySide -> Lwd.set view_mode Normal
-
 type line = Change of string | Common of string | Empty
 
-let split_and_align_hunk hunks =
-  let rec process_hunk mine_acc their_acc = function
+let split_and_align_hunk hunks : line list * line list =
+  let rec process_hunk (mine_acc : line list) (their_acc : line list) = function
     | [] -> (List.rev mine_acc, List.rev their_acc)
     | `Common line :: rest ->
         process_hunk (Common line :: mine_acc) (Common line :: their_acc) rest
     | changes ->
-        let rec buffer_changes mine their = function
+        let rec buffer_changes (mine : line list) (their : line list) = function
           | `Mine line :: rest ->
               buffer_changes (Change line :: mine) their rest
           | `Their line :: rest ->
@@ -107,8 +98,9 @@ let split_and_align_hunk hunks =
         let max_len =
           max (List.length mine_changes) (List.length their_changes)
         in
-        let pad_and_append orig_acc changes =
-          let rec pad_append acc i =
+        let pad_and_append (orig_acc : line list) (changes : line list) :
+            line list =
+          let rec pad_append (acc : line list) (i : int) : line list =
             if i < max_len then
               if i < List.length changes then
                 pad_append (List.nth changes i :: acc) (i + 1)
@@ -123,8 +115,9 @@ let split_and_align_hunk hunks =
   in
   process_hunk [] [] hunks
 
-let lines_with_numbers lines attr_change prefix =
-  let rec process_lines line_num acc = function
+let lines_with_numbers (lines : line list) (attr_change : Notty.attr)
+    (prefix : string) : Nottui.ui list =
+  let rec process_lines (line_num : int) (acc : Nottui.ui list) = function
     | [] -> List.rev acc
     | line :: rest ->
         let content, attr, next_num =
@@ -144,14 +137,15 @@ let lines_with_numbers lines attr_change prefix =
   in
   process_lines 1 [] lines
 
-let create_summary start_line_num hunk_length attr change_type =
+let create_summary (start_line_num : int) (hunk_length : int)
+    (attr : Notty.attr) (change_type : [ `Add | `Remove ]) : Nottui.ui =
   let sign = match change_type with `Add -> "+" | `Remove -> "-" in
   if hunk_length > 0 then
     W.string ~attr
       (Printf.sprintf "@@ %s%d,%d @@" sign start_line_num hunk_length)
   else W.string ~attr (Printf.sprintf "@@ %s0,0 @@" sign)
 
-let ui_of_hunk_side_by_side hunk =
+let ui_of_hunk_side_by_side (hunk : Patch.hunk) : Nottui.ui =
   let attr_mine = Notty.A.(fg red ++ st bold) in
   let attr_their = Notty.A.(fg green ++ st bold) in
 
@@ -177,8 +171,7 @@ let ui_of_hunk_side_by_side hunk =
       Ui.resize ~w:0 ~sw:2 (Ui.vcat (summary_their :: content_their));
     ]
 
-let current_hunks_side_by_side z_patches : ui Lwd.t =
-  let$ z = Lwd.get z_patches in
-  let p = Zipper.get_focus z in
-  let hunks_ui = List.map (fun h -> ui_of_hunk_side_by_side h) p.Patch.hunks in
-  Ui.vcat @@ hunks_ui
+let current_hunks_side_by_side (z_patches : Patch.t Zipper.t) : Nottui.ui =
+  let p = Zipper.get_focus z_patches in
+  let hunks_ui = List.map ui_of_hunk_side_by_side p.Patch.hunks in
+  Ui.vcat hunks_ui

@@ -2,32 +2,46 @@ open Nottui
 module W = Nottui_widgets
 open Lwd_infix
 
+type view_mode = SideBySide | Normal
+
+let view_mode : view_mode Lwd.var = Lwd.var Normal
+
+let toggle_view_mode () : unit =
+  match Lwd.peek view_mode with
+  | Normal -> Lwd.set view_mode SideBySide
+  | SideBySide -> Lwd.set view_mode Normal
+
 let help_visible = Lwd.var false
+let quit = Lwd.var false
 
 let toggle_help_visibility () =
   Lwd.set help_visible (not (Lwd.peek help_visible))
 
 let view (patches : Patch.t list) =
-  let z_patches : 'a Zipper.t Lwd.var =
+  let z_patches : Patch.t Zipper.t =
     match Zipper.zipper_of_list patches with
-    | Some z -> Lwd.var z
+    | Some z -> z
     | None -> failwith "zipper_of_list: empty list"
   in
+
   let hunks_ui =
-    Lwd.bind (Lwd.get HunkView.view_mode) ~f:(fun mode ->
-        match mode with
-        | Normal -> HunkView.current_hunks z_patches
-        | SideBySide -> HunkView.current_hunks_side_by_side z_patches)
+    let$ mode = Lwd.get view_mode in
+    match mode with
+    | Normal -> HunkView.current_hunks z_patches
+    | SideBySide -> HunkView.current_hunks_side_by_side z_patches
   in
+
   let curr_scroll_state = Lwd.var W.default_scroll_state in
+
   let change_scroll_state _action state =
     let off_screen = state.W.position > state.W.bound in
     if off_screen then
       Lwd.set curr_scroll_state { state with position = state.W.bound }
     else Lwd.set curr_scroll_state state
   in
+
   let ui =
-    let$* help_visible = Lwd.get help_visible in
+    let$ help_visible = Lwd.get help_visible in
     if help_visible then
       W.vbox
         [
@@ -54,7 +68,7 @@ let view (patches : Patch.t list) =
           @@ Ui.keyboard_area
                (function
                  | `ASCII 'q', [] ->
-                     Lwd.set PatchNavigation.quit true;
+                     Lwd.set quit true;
                      `Handled
                  | `ASCII 'n', [] ->
                      PatchNavigation.navigate z_patches PatchNavigation.Next;
@@ -66,7 +80,7 @@ let view (patches : Patch.t list) =
                      toggle_help_visibility ();
                      `Handled
                  | `ASCII 't', [] ->
-                     HunkView.toggle_view_mode ();
+                     toggle_view_mode ();
                      `Handled
                  | _ -> `Unhandled)
                (W.string
@@ -75,13 +89,12 @@ let view (patches : Patch.t list) =
                    Press 't' to toggle view mode.");
         ]
   in
+
   W.vbox [ ui ]
 
-let start patch =
-  Ui_loop.run ~quit:PatchNavigation.quit ~tick_period:0.2 (view patch)
+let start patch = Ui_loop.run ~quit ~tick_period:0.2 (view patch)
 
 (* Tests *)
-
 let start_test patch events width height =
   let convert_char_to_key (c : char) : Ui.key = (`ASCII c, []) in
   let content_ui_root = Lwd.observe (view patch) in
@@ -91,7 +104,6 @@ let start_test patch events width height =
     Renderer.update renderer (width, height) content_ui;
     renderer
   in
-
   let rec process_events (events : char list) =
     match events with
     | [] -> ()
@@ -102,7 +114,6 @@ let start_test patch events width height =
           (Lwd.quick_sample content_ui_root);
         process_events rest
   in
-
   process_events events;
   let init_image = Renderer.image ui_renderer in
   Notty_unix.output_image init_image;

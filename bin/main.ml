@@ -9,39 +9,34 @@ let setup_input = function
   | Some path ->
       if not (Sys.file_exists path) then failwith ("File not found: " ^ path);
       let ic = In_channel.open_bin path in
-      (Some ic, Notty_unix.Term.create ())
+      (Some ic, Notty_unix.Term.create (), None)
   | None ->
       let tty_path = ttyname Unix.stdout in
       let tty_fd = Unix.openfile tty_path [ Unix.O_RDWR ] 0o600 in
       let term = Notty_unix.Term.create ~input:tty_fd ~output:tty_fd () in
-      Unix.close tty_fd;
-      if not (Unix.isatty Unix.stdin) then (Some In_channel.stdin, term)
-      else (None, term)
+      if not (Unix.isatty Unix.stdin) then (Some In_channel.stdin, term, None)
+      else (None, term, Some tty_fd)
 
-let safe_read_input ic =
+let safe_read_input ic is_stdin =
   try
     let content = In_channel.input_all ic in
-    In_channel.close ic;
+    if not is_stdin then In_channel.close ic;
     content
   with _ ->
-    In_channel.close ic;
+    if not is_stdin then In_channel.close ic;
     create_empty_diff_content ()
 
 let main file_path =
-  let ic_opt, term = setup_input file_path in
+  let ic_opt, term, tty_fd_opt = setup_input file_path in
   let input_content =
     match ic_opt with
     | None -> create_empty_diff_content ()
-    | Some ic ->
-        if ic == In_channel.stdin then (
-          let content = safe_read_input ic in
-          In_channel.close ic;
-          content)
-        else safe_read_input ic
+    | Some ic -> safe_read_input ic (ic == In_channel.stdin)
   in
   let patch = Patch.to_diffs input_content in
   Interactive_viewer.start ~term patch;
-  Notty_unix.Term.release term
+  Notty_unix.Term.release term;
+  match tty_fd_opt with Some tty_fd -> Unix.close tty_fd | None -> ()
 
 let file_arg =
   let doc =

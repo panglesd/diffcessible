@@ -6,6 +6,12 @@ val operation_info : Patch.t Zipper.t -> Nottui.ui
     @param z_patches A reactive variable containing a zipper of patches.
     @return A reactive UI element that displays operation-related information. *)
 
+val change_summary : Patch.t Zipper.t -> Nottui.ui
+(** [change_summary z_patches] creates a reactive UI element that displays a summary of the changes in the current operation.
+    It shows the number of lines added, removed, and modified in the current patch.
+    @param z_patches A reactive variable containing a zipper of patches.
+    @return A reactive UI element that displays a summary of the changes in the current operation. *)
+
 val current_operation : Patch.t Zipper.t -> Nottui.ui
 (** [current_operation z_patches] generates a reactive UI element that displays the current operation from a zipper of patches.
     This function uses internal mechanisms to render the details of the operation at the current focus of the zipper.

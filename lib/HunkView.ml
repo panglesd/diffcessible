@@ -1,6 +1,5 @@
 open Nottui
 module W = Nottui_widgets
-open Lwd_infix
 
 (* Implementation of Single View Mode *)
 

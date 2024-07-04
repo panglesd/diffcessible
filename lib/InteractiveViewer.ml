@@ -36,6 +36,10 @@ let view (patches : Patch.t list) =
       Lwd.set curr_scroll_state { state with position = state.W.bound }
     else Lwd.set curr_scroll_state state
   in
+  let project_op (op : Patch.t Zipper.t -> Nottui.ui) : ui Lwd.t =
+    let$ z_patches = Lwd.get z_patches_var in
+    op z_patches
+  in
   let ui =
     let$ help_visible = Lwd.get help_visible in
     if help_visible then
@@ -52,11 +56,14 @@ let view (patches : Patch.t list) =
                (W.string "Type 'q' to exit the help panel");
         ]
     else
+      let operation_info = project_op OperationView.operation_info in
+      let change_summary = project_op OperationView.change_summary in
+      let current_operation = project_op OperationView.current_operation in
       W.vbox
         [
-          Lwd.pure (OperationView.operation_info (Lwd.peek z_patches_var));
-          Lwd.pure (OperationView.change_summary (Lwd.peek z_patches_var));
-          Lwd.pure (OperationView.current_operation (Lwd.peek z_patches_var));
+          operation_info;
+          change_summary;
+          current_operation;
           W.vscroll_area
             ~state:(Lwd.get curr_scroll_state)
             ~change:change_scroll_state hunks_ui;

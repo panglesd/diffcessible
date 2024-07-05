@@ -16,8 +16,3 @@ let help_panel =
       W.string ~attr:shortcut_attr "t:   Toggle view mode";
       W.string ~attr:shortcut_attr "l:   Toggle line numbers";
     ]
-
-let help_keyboard_area =
-  Ui.keyboard_area
-    (function `ASCII 'q', [] -> `Handled | _ -> `Unhandled)
-    (W.string ~attr:Notty.A.(fg lightblue) "Type 'q' to exit the help panel")

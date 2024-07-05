@@ -2,8 +2,16 @@
 opam-version: "2.0"
 synopsis: "An accessible diff viewer"
 description: "A TUI diff viewer aimed at being accessible."
-maintainer: ["Paul-Elliot <peada@free.fr>" "Jules Aguillon <jules@j3s.fr>"]
-authors: ["Paul-Elliot <peada@free.fr>" "Jules Aguillon <jules@j3s.fr>"]
+maintainer: [
+  "Paul-Elliot <peada@free.fr>"
+  "Jules Aguillon <jules@j3s.fr>"
+  "Alan Matthew <alan.matthew.yk@gmail.com>"
+]
+authors: [
+  "Paul-Elliot <peada@free.fr>"
+  "Jules Aguillon <jules@j3s.fr>"
+  "Alan Matthew <alan.matthew.yk@gmail.com>"
+]
 license: "MIT"
 tags: ["diff" "diff viewer" "accessibility"]
 homepage: "https://github.com/panglesd/diffcessible"

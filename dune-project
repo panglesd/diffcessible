@@ -7,9 +7,9 @@
 (source
  (github panglesd/diffcessible))
 
-(authors "Paul-Elliot <peada@free.fr>" "Jules Aguillon <jules@j3s.fr>")
+(authors "Paul-Elliot <peada@free.fr>" "Jules Aguillon <jules@j3s.fr>" "Alan Matthew <alan.matthew.yk@gmail.com>")
 
-(maintainers "Paul-Elliot <peada@free.fr>" "Jules Aguillon <jules@j3s.fr>")
+(maintainers "Paul-Elliot <peada@free.fr>" "Jules Aguillon <jules@j3s.fr>" "Alan Matthew <alan.matthew.yk@gmail.com>")
 
 (license MIT)
 

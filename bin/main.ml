@@ -5,38 +5,41 @@ open ExtUnix.Specific
 let create_empty_diff_content () =
   "diff --git a/Error b/Error\n--- a/Error\n+++ b/Error\n"
 
-let setup_input = function
+let with_input_fd file_path f =
+  match file_path with
   | Some path ->
       if not (Sys.file_exists path) then failwith ("File not found: " ^ path);
-      let ic = In_channel.open_bin path in
-      (Some ic, Notty_unix.Term.create (), None)
-  | None ->
-      let tty_path = ttyname Unix.stdout in
-      let tty_fd = Unix.openfile tty_path [ Unix.O_RDWR ] 0o600 in
-      let term = Notty_unix.Term.create ~input:tty_fd ~output:tty_fd () in
-      if not (Unix.isatty Unix.stdin) then (Some In_channel.stdin, term, None)
-      else (None, term, Some tty_fd)
+      In_channel.with_open_bin path f
+  | None -> f In_channel.stdin
 
-let safe_read_input ic is_stdin =
-  try
-    let content = In_channel.input_all ic in
-    if not is_stdin then In_channel.close ic;
-    content
-  with _ ->
-    if not is_stdin then In_channel.close ic;
-    create_empty_diff_content ()
+let setup_term () =
+  let tty_path = ttyname Unix.stdout in
+  let tty_fd = Unix.openfile tty_path [ Unix.O_RDWR ] 0o600 in
+  let term = Notty_unix.Term.create ~input:tty_fd ~output:tty_fd () in
+  (Unix.isatty Unix.stdin, term, tty_fd)
+
+let read_input ic =
+  try In_channel.input_all ic with _ -> create_empty_diff_content ()
 
 let main file_path =
-  let ic_opt, term, tty_fd_opt = setup_input file_path in
-  let input_content =
-    match ic_opt with
-    | None -> create_empty_diff_content ()
-    | Some ic -> safe_read_input ic (ic == In_channel.stdin)
-  in
-  let patch = Patch.to_diffs input_content in
-  Interactive_viewer.start ~term patch;
-  Notty_unix.Term.release term;
-  match tty_fd_opt with Some tty_fd -> Unix.close tty_fd | None -> ()
+  let is_tty, term, tty_fd = setup_term () in
+  Fun.protect
+    (fun () ->
+      let input_content =
+        if is_tty then
+          match file_path with
+          | Some _ -> with_input_fd file_path read_input
+          | None -> create_empty_diff_content ()
+        else
+          Fun.protect
+            (fun () -> read_input In_channel.stdin)
+            ~finally:(fun () -> In_channel.close In_channel.stdin)
+      in
+      let patch = Patch.to_diffs input_content in
+      Interactive_viewer.start ~term patch)
+    ~finally:(fun () ->
+      Notty_unix.Term.release term;
+      Unix.close tty_fd)
 
 let file_arg =
   let doc =

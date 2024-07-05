@@ -37,8 +37,7 @@ let view (patches : Patch.t list) =
     else Lwd.set curr_scroll_state state
   in
   let project_op (op : Patch.t Zipper.t -> Nottui.ui) : ui Lwd.t =
-    let$ z_patches = Lwd.get z_patches_var in
-    op z_patches
+    Lwd.map (Lwd.get z_patches_var) ~f:op
   in
   let ui =
     let$ help_visible = Lwd.get help_visible in

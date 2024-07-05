@@ -21,6 +21,7 @@ depends: [
   "dune" {>= "3.11"}
   "cmdliner"
   "seq"
+  "extunix"
   "notty" {>= "0.2"}
   "odoc" {with-doc}
 ]

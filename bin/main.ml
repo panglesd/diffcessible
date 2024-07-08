@@ -12,19 +12,22 @@ let with_input_fd file_path f =
       In_channel.with_open_bin path f
   | None -> f In_channel.stdin
 
-let setup_term () =
+let with_setup_term f =
   let tty_path = ttyname Unix.stdout in
   let tty_fd = Unix.openfile tty_path [ Unix.O_RDWR ] 0o600 in
   let term = Notty_unix.Term.create ~input:tty_fd ~output:tty_fd () in
-  (Unix.isatty Unix.stdin, term, tty_fd)
+  let is_tty = Unix.isatty Unix.stdin in
+  Fun.protect
+    (fun () -> f is_tty term)
+    ~finally:(fun () ->
+      Notty_unix.Term.release term;
+      Unix.close tty_fd)
 
 let read_input ic =
   try In_channel.input_all ic with _ -> create_empty_diff_content ()
 
 let main file_path =
-  let is_tty, term, tty_fd = setup_term () in
-  Fun.protect
-    (fun () ->
+  with_setup_term (fun is_tty term ->
       let input_content =
         if is_tty then
           match file_path with
@@ -37,9 +40,6 @@ let main file_path =
       in
       let patch = Patch.to_diffs input_content in
       InteractiveViewer.start ~term patch)
-    ~finally:(fun () ->
-      Notty_unix.Term.release term;
-      Unix.close tty_fd)
 
 let file_arg =
   let doc =

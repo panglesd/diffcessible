@@ -80,6 +80,14 @@ let current_hunks (z_patches : Patch.t Zipper.t) : Nottui.ui =
 
 type line = Change of string | Common of string | Empty
 
+(*
+
+    [Common, Their, Their, Mine]
+
+   List A [Common, Their, Their]
+   List B [Common, Mine, Empty]
+*)
+
 let split_and_align_hunk hunks : line list * line list =
   let rec process_hunk (mine_acc : line list) (their_acc : line list) = function
     | [] -> (List.rev mine_acc, List.rev their_acc)

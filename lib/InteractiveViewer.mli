@@ -1,4 +1,4 @@
-val start : Patch.t list -> unit
+val start : ?term:Notty_unix.Term.t -> Patch.t list -> unit
 (** [start patches] starts diffcessible with the given patches *)
 
 val start_test : Patch.t list -> char list -> int -> int -> unit

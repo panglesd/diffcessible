@@ -46,7 +46,7 @@ let main file_path =
 
 let file_arg =
   let doc = "Path to the input file." in
-  Arg.(value & pos 0 (some string) None & info [] ~docv:"FILE" ~doc)
+  Arg.(value & opt (some string) None & info [ "f"; "file" ] ~docv:"FILE" ~doc)
 
 let cmd =
   let doc =
@@ -57,4 +57,3 @@ let cmd =
   Cmd.v info Term.(const main $ file_arg)
 
 let () = exit (Cmd.eval cmd)
-

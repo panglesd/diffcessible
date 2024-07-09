@@ -148,4 +148,3 @@ let old_str : string = "Foo bar baz"
 let new_str : string = "Foo baz bar"
 let diff : string = word_diff old_str new_str
 let () = print_endline diff
-

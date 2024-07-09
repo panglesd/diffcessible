@@ -6,11 +6,9 @@ let create_empty_diff_content () =
   "diff --git a/Error b/Error\n--- a/Error\n+++ b/Error\n"
 
 let with_input_fd file_path f =
-  match file_path with
-  | Some path ->
-      if not (Sys.file_exists path) then failwith ("File not found: " ^ path);
-      In_channel.with_open_bin path f
-  | None -> f In_channel.stdin
+  if not (Sys.file_exists file_path) then
+    failwith ("File not found: " ^ file_path);
+  In_channel.with_open_bin file_path f
 
 let with_setup_term f =
   let is_tty = Unix.isatty Unix.stdin in
@@ -19,14 +17,14 @@ let with_setup_term f =
       Notty_unix.Term.create ~input:Unix.stdin ~output:Unix.stdout ()
     in
     Fun.protect
-      (fun () -> f is_tty term)
+      (fun () -> f term)
       ~finally:(fun () -> Notty_unix.Term.release term)
   else
     let tty_path = ttyname Unix.stdout in
     let tty_fd = Unix.openfile tty_path [ Unix.O_RDWR ] 0o600 in
     let term = Notty_unix.Term.create ~input:tty_fd ~output:tty_fd () in
     Fun.protect
-      (fun () -> f is_tty term)
+      (fun () -> f term)
       ~finally:(fun () ->
         Notty_unix.Term.release term;
         Unix.close tty_fd)
@@ -35,12 +33,12 @@ let read_input ic =
   try In_channel.input_all ic with _ -> create_empty_diff_content ()
 
 let main file_path =
-  with_setup_term (fun is_tty term ->
+  with_setup_term (fun term ->
       let input_content =
         match file_path with
-        | Some path -> with_input_fd (Some path) read_input
+        | Some path -> with_input_fd path read_input
         | None ->
-            if is_tty then create_empty_diff_content ()
+            if Unix.isatty Unix.stdin then create_empty_diff_content ()
             else read_input In_channel.stdin
       in
       let patch = Patch.to_diffs input_content in
@@ -48,7 +46,7 @@ let main file_path =
 
 let file_arg =
   let doc = "Path to the input file." in
-  Arg.(value & opt (some string) None & info [ "f"; "file" ] ~docv:"FILE" ~doc)
+  Arg.(value & pos 0 (some string) None & info [] ~docv:"FILE" ~doc)
 
 let cmd =
   let doc =
@@ -59,3 +57,4 @@ let cmd =
   Cmd.v info Term.(const main $ file_arg)
 
 let () = exit (Cmd.eval cmd)
+

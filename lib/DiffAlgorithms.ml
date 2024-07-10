@@ -131,7 +131,7 @@ let rec find_path a b left top right bottom =
       @
       match tail with
       | [] -> [ (finish_x, finish_y) ]
-      | _ -> (finish_x, finish_y) :: tail)
+      | _ -> tail @ [ (finish_x, finish_y) ])
 
 let walk_snakes a b =
   let rec walk_diagonal x1 y1 x2 y2 acc =

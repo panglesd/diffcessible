@@ -1,150 +1,209 @@
-type diff_line = Common of string | Mine of string | Their of string
+type snake = (int * int) * (int * int)
+type edit = Common of string | Mine of string | Their of string
+type box = { left : int; top : int; right : int; bottom : int }
 
-let word_diff (old_str : string) (new_str : string) : string =
-  let old_words : string list = String.split_on_char ' ' old_str in
-  let new_words : string list = String.split_on_char ' ' new_str in
+let width box = box.right - box.left
+let height box = box.bottom - box.top
+let size box = width box + height box
+let delta box = width box - height box
 
-  let find_middle_snake (start_old : int) (end_old : int) (start_new : int)
-      (end_new : int) : (int * int) option =
-    let m : int = end_old - start_old in
-    let n : int = end_new - start_new in
-    let delta : int = m - n in
-    let max_d = (m + n + 1) / 2 in
-    let forward : int array = Array.make ((2 * max_d) + 1) 0 in
-    let backward : int array = Array.make ((2 * max_d) + 1) 0 in
+let assert_index bounds idx =
+  if idx >= 0 && idx < bounds then idx
+  else raise (Invalid_argument "index out of bounds")
 
-    let rec loop (d : int) : (int * int) option =
-      if d > max_d then None
-      else
-        let found_snake : (int * int) option ref = ref None in
-        for k = -d to d do
-          let k_val : int =
-            if
-              k = -d
-              || (k <> d && forward.(k - 1 + max_d) < forward.(k + 1 + max_d))
-            then forward.(k + 1 + max_d)
-            else forward.(k - 1 + max_d) + 1
-          in
-          let x : int ref = ref k_val in
-          let y : int ref = ref (k_val - k) in
-          while
-            !x < m && !y < n
-            && String.equal
-                 (List.nth old_words (start_old + !x))
-                 (List.nth new_words (start_new + !y))
-          do
-            incr x;
-            incr y
-          done;
-          forward.(k + max_d) <- !x;
-
-          let c : int = k - delta in
-          if c >= -d && c <= d then (
-            let c_val : int =
-              if
-                c = -d
-                || c <> d
-                   && backward.(c - 1 + max_d) > backward.(c + 1 + max_d)
-              then backward.(c + 1 + max_d)
-              else backward.(c - 1 + max_d) - 1
-            in
-            let x : int ref = ref c_val in
-            let y : int ref = ref (c_val - c) in
-            while
-              !x > 0 && !y > 0
-              && String.equal
-                   (List.nth old_words (end_old - !x))
-                   (List.nth new_words (end_new - !y))
-            do
-              decr x;
-              decr y
-            done;
-            backward.(c + max_d) <- !x;
-
-            if forward.(k + max_d) >= m - backward.(c + max_d) then
-              let start_snake : int = forward.(k + max_d) in
-              let end_snake : int = n - backward.(c + max_d) in
-              if start_snake + end_snake >= m then
-                found_snake :=
-                  Some (start_old + start_snake, start_new + end_snake))
-        done;
-
-        match !found_snake with Some _ -> !found_snake | None -> loop (d + 1)
+let rec midpoint box a b =
+  Printf.printf "midpoint called with box: %d, %d, %d, %d\n" box.left box.top
+    box.right box.bottom;
+  if size box = 0 then (
+    Printf.printf "size of box is 0, returning None\n";
+    None)
+  else
+    let max = (size box + 1) / 2 in
+    let vf = Array.make ((2 * max) + 1) box.left in
+    let vb = Array.make ((2 * max) + 1) box.bottom in
+    let check_snake d =
+      match forwards box vf vb d a b with
+      | Some snake ->
+          Printf.printf "  forwards returned Some snake\n";
+          Some snake
+      | None -> (
+          Printf.printf "  forwards returned None\n";
+          match backward box vf vb d a b with
+          | Some snake ->
+              Printf.printf "  backward returned Some snake\n";
+              Some snake
+          | None ->
+              Printf.printf "  backward returned None\n";
+              None)
     in
-    loop 0
-  in
+    let result = ref None in
+    for d = 0 to max do
+      if !result = None then result := check_snake d
+    done;
+    !result
 
-  let rec diff_recursive (start_old : int) (end_old : int) (start_new : int)
-      (end_new : int) : diff_line list =
-    if start_old >= end_old && start_new >= end_new then []
-    else if start_old >= end_old then
-      List.init (end_new - start_new) (fun i ->
-          Their (List.nth new_words (start_new + i)))
-    else if start_new >= end_new then
-      List.init (end_old - start_old) (fun i ->
-          Mine (List.nth old_words (start_old + i)))
-    else
-      match find_middle_snake start_old end_old start_new end_new with
-      | Some (split_old, split_new) ->
-          let left_diff : diff_line list =
-            diff_recursive start_old split_old start_new split_new
-          in
-          let right_diff : diff_line list =
-            diff_recursive split_old end_old split_new end_new
-          in
-          left_diff @ right_diff
-      | None ->
-          let old_sublist : string list =
-            List.init (end_old - start_old) (fun i ->
-                List.nth old_words (start_old + i))
-          in
-          let new_sublist : string list =
-            List.init (end_new - start_new) (fun i ->
-                List.nth new_words (start_new + i))
-          in
-          let rec merge_diffs (acc : diff_line list) (old_words : string list)
-              (new_words : string list) : diff_line list =
-            match (old_words, new_words) with
-            | [], [] -> acc
-            | old_word :: old_rest, [] ->
-                merge_diffs (Mine old_word :: acc) old_rest []
-            | [], new_word :: new_rest ->
-                merge_diffs (Their new_word :: acc) [] new_rest
-            | old_word :: old_rest, new_word :: new_rest ->
-                if String.equal old_word new_word then
-                  merge_diffs (Common old_word :: acc) old_rest new_rest
-                else
-                  merge_diffs
-                    (Mine old_word :: Their new_word :: acc)
-                    old_rest new_rest
-          in
-          List.rev (merge_diffs [] old_sublist new_sublist)
-  in
+and forwards box vf vb d a b =
+  Printf.printf "forwards called with d = %d\n" d;
+  let max_d = (Array.length vf - 1) / 2 in
+  let result = ref None in
+  for k = -d to d do
+    if !result = None && k mod 2 = 0 then
+      Printf.printf "  forwards loop called with k = %d\n" k;
+    let x =
+      if k = -d || (k <> d && vf.(k - 1 + max_d) < vf.(k + 1 + max_d)) then
+        vf.(k + 1 + max_d)
+      else vf.(k - 1 + max_d) + 1
+    in
+    let px = if k <> -d && x = vf.(k + 1 + max_d) then x - 1 else x in
+    let y = box.top + (x - box.left) - k in
+    let py = if d = 0 || x <> px then y else y - 1 in
+    let rec diagonal x y =
+      if
+        x < box.right && y < box.bottom
+        && assert_index (List.length a) x = assert_index (List.length b) y
+      then diagonal (x + 1) (y + 1)
+      else (x, y)
+    in
+    let x, y = diagonal x y in
+    vf.(k + max_d) <- x;
+    if
+      delta box mod 2 = 1
+      && k >= -d + 1
+      && k <= d - 1
+      && y >= vb.(k - delta box + max_d)
+    then (
+      Printf.printf "  found a snake, returning Some ((px, py), (x, y))\n";
+      result := Some ((px, py), (x, y)))
+  done;
+  !result
 
-  let diff_lines : diff_line list =
-    diff_recursive 0 (List.length old_words) 0 (List.length new_words)
-  in
+and backward box vf vb d a b =
+  Printf.printf "backward called with d = %d\n" d;
+  let max_d = (Array.length vb - 1) / 2 in
+  let result = ref None in
+  for k = -d to d do
+    if !result = None && k mod 2 = 0 then
+      Printf.printf "  backward loop called with k = %d\n" k;
+    let y =
+      if k = -d || (k <> d && vb.(k - 1 + max_d) > vb.(k + 1 + max_d)) then
+        vb.(k + 1 + max_d)
+      else vb.(k - 1 + max_d) - 1
+    in
+    let py = if k <> -d && y = vb.(k + 1 + max_d) then y + 1 else y in
+    let x = box.left + (y - box.top) + k in
+    let px = if d = 0 || y <> py then x else x + 1 in
+    let rec diagonal x y =
+      if
+        x > box.left && y > box.top
+        && assert_index (List.length a) (x - 1)
+           = assert_index (List.length b) (y - 1)
+      then diagonal (x - 1) (y - 1)
+      else (x, y)
+    in
+    let x, y = diagonal x y in
+    vb.(k + max_d) <- y;
+    if
+      delta box mod 2 = 0
+      && k >= -d && k <= d
+      && x <= vf.(k + delta box + max_d)
+    then (
+      Printf.printf "  found a snake, returning Some ((x, y), (px, py))\n";
+      result := Some ((x, y), (px, py)))
+  done;
+  !result
 
-  let rec build_diff_string (acc : string list) (diff_lines : diff_line list) :
-      string =
-    match diff_lines with
-    | [] -> String.concat "\n" (List.rev acc)
-    | Common word :: rest -> build_diff_string (word :: acc) rest
-    | Mine word :: Their new_word :: rest ->
-        let line : string = Printf.sprintf "- %s\n+ %s" word new_word in
-        build_diff_string (line :: acc) rest
-    | Mine word :: rest ->
-        let line : string = Printf.sprintf "- %s" word in
-        build_diff_string (line :: acc) rest
-    | Their word :: rest ->
-        let line : string = Printf.sprintf "+ %s" word in
-        build_diff_string (line :: acc) rest
-  in
+let rec find_path a b left top right bottom =
+  Printf.printf "find_path called with left=%d, top=%d, right=%d, bottom=%d\n"
+    left top right bottom;
+  let box = { left; top; right; bottom } in
+  match midpoint box a b with
+  | None ->
+      Printf.printf "midpoint returned None\n";
+      []
+  | Some ((start_x, start_y), (finish_x, finish_y)) -> (
+      Printf.printf
+        "midpoint returned Some ((start_x, start_y), (finish_x, finish_y))\n";
+      let head = find_path a b box.left box.top start_x start_y in
+      let tail = find_path a b finish_x finish_y box.right box.bottom in
+      (match head with
+      | [] -> [ (start_x, start_y) ]
+      | _ -> (start_x, start_y) :: head)
+      @
+      match tail with
+      | [] -> [ (finish_x, finish_y) ]
+      | _ -> (finish_x, finish_y) :: tail)
 
-  build_diff_string [] diff_lines
+let walk_snakes a b =
+  let rec walk_diagonal x1 y1 x2 y2 acc =
+    if
+      x1 < x2 && y1 < y2
+      && assert_index (List.length a) x1 = assert_index (List.length b) y1
+    then walk_diagonal (x1 + 1) (y1 + 1) x2 y2 ((x1, y1, x1 + 1, y1 + 1) :: acc)
+    else (x1, y1, acc)
+  in
+  let rec loop = function
+    | [] ->
+        Printf.printf "loop called with empty list\n";
+        []
+    | [ (_, _) ] ->
+        Printf.printf "loop called with singleton list\n";
+        []
+    | (x1, y1) :: (x2, y2) :: rest ->
+        Printf.printf
+          "loop called with (x1, y1) = (%d, %d) and (x2, y2) = (%d, %d)\n" x1 y1
+          x2 y2;
+        let x1', y1', steps = walk_diagonal x1 y1 x2 y2 [] in
+        let steps =
+          match (x2 - x1', y2 - y1') with
+          | 0, 1 ->
+              Printf.printf "  downward step\n";
+              (x1', y1', x1', y1' + 1) :: steps
+          | 1, 0 ->
+              Printf.printf "  rightward step\n";
+              (x1', y1', x1' + 1, y1') :: steps
+          | _ ->
+              Printf.printf "  diagonal step\n";
+              steps
+        in
+        steps @ loop ((x2, y2) :: rest)
+  in
+  loop (find_path a b 0 0 (List.length a) (List.length b))
+
+let diff a b =
+  let rec loop = function
+    | [] ->
+        Printf.printf "diff loop called with empty list\n";
+        []
+    | (x1, y1, x2, y2) :: rest ->
+        Printf.printf
+          "diff loop called with (x1, y1, x2, y2) = (%d, %d, %d, %d)\n" x1 y1 x2
+          y2;
+        if x1 = x2 then (
+          let line = List.nth b y1 in
+          Printf.printf "  x1 = x2, adding Their (List.nth b %d) = %s\n" y1 line;
+          Their line :: loop rest)
+        else if y1 = y2 then (
+          let line = List.nth a x1 in
+          Printf.printf "  y1 = y2, adding Mine (List.nth a %d) = %s\n" x1 line;
+          Mine line :: loop rest)
+        else
+          let line = List.nth a x1 in
+          Printf.printf "  adding Common (List.nth a %d) = %s\n" x1 line;
+          Common line :: loop rest
+  in
+  loop (walk_snakes a b)
 
 (* Example usage *)
-let old_str : string = "Foo bar baz"
-let new_str : string = "Foo baz bar"
-let diff : string = word_diff old_str new_str
-let () = print_endline diff
+let old_str = "Foo\nbar\nbaz"
+let new_str = "Foo\nbaz\nbar"
+let old_lines = String.split_on_char '\n' old_str
+let new_lines = String.split_on_char '\n' new_str
+let diffs = diff old_lines new_lines
+
+let () =
+  List.iter
+    (function
+      | Common line -> Printf.printf "  %s\n" line
+      | Mine line -> Printf.printf "- %s\n" line
+      | Their line -> Printf.printf "+ %s\n" line)
+    diffs

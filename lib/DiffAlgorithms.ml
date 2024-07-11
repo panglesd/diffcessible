@@ -11,7 +11,8 @@ let longest (xs : 'a list) (ys : 'a list) : 'a list =
   if List.length xs > List.length ys then xs else ys
 
 let get (arr : 'a array) (idx : int) : 'a =
-  if idx < 0 || idx >= Array.length arr then failwith "Index out of bounds"
+  if idx < 0 || idx >= Array.length arr then
+    failwith "Error: Index out of bounds"
   else arr.(idx)
 
 let forwards (grid : grid) (vf : int array) (vb : int array) (d : int) :
@@ -81,3 +82,47 @@ let backward (grid : grid) (vf : int array) (vb : int array) (d : int) :
     else step (c - 2)
   in
   step d
+
+let midpoint (grid : grid) : snake option =
+  if size grid = 0 then None
+  else
+    let max = int_of_float (ceil (float_of_int (size grid) /. 2.0)) in
+    let vf = Array.make ((2 * max) + 1) 0 in
+    let vb = Array.make ((2 * max) + 1) 0 in
+    vf.(1) <- grid.left;
+    vb.(1) <- grid.bottom;
+    let rec search d =
+      if d > max then None
+      else
+        match forwards grid vf vb d with
+        | snake :: _ -> Some snake
+        | [] -> (
+            match backward grid vf vb d with
+            | snake :: _ -> Some snake
+            | [] -> search (d + 1))
+    in
+    search 0
+
+let rec find_path (left : int) (top : int) (right : int) (bottom : int) :
+    (int * int) list option =
+  let grid = { left; top; right; bottom } in
+  let snake =
+    match midpoint grid with
+    | None -> None
+    | Some snake ->
+        let start, finish = snake in
+        let head = find_path left top (fst start) (snd start) in
+        let tail = find_path (fst finish) (snd finish) right bottom in
+        Some
+          ((match head with None -> [ start ] | Some h -> h)
+          @ match tail with None -> [ finish ] | Some t -> t)
+  in
+  snake
+
+let a = [| "a"; "b"; "c"; "d"; "e" |]
+let b = [| "a"; "b"; "x"; "d"; "e" |]
+
+let () =
+  match find_path 0 0 (Array.length a) (Array.length b) with
+  | Some path -> List.iter (fun (x, y) -> Printf.printf "(%d, %d)\n" x y) path
+  | None -> Printf.printf "No path found\n"

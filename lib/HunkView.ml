@@ -31,38 +31,37 @@ let ui_hunk_summary (hunk : Patch.hunk) : Nottui.ui =
       at_symbols;
     ]
 
-let ui_unified_diff (hunk : Patch.hunk) : Nottui.ui =
-  let rec process_lines (mine_num : int) (their_num : int)
-      (acc : Nottui.ui list) = function
-    | [] -> List.rev acc
-    | line :: rest ->
-        let new_mine, new_their, ui_element =
-          match line with
-          | `Common line ->
-              let ui =
-                W.string ~attr:Notty.A.empty
-                  (Printf.sprintf "%2d %2d   %s" (mine_num + 1) (their_num + 1)
-                     line)
-              in
-              (mine_num + 1, their_num + 1, ui)
-          | `Their line ->
-              let ui =
-                W.string
-                  ~attr:Notty.A.(fg green)
-                  (Printf.sprintf "   %2d + %s" (their_num + 1) line)
-              in
-              (mine_num, their_num + 1, ui)
-          | `Mine line ->
-              let ui =
-                W.string
-                  ~attr:Notty.A.(fg red)
-                  (Printf.sprintf "%2d    - %s" (mine_num + 1) line)
-              in
-              (mine_num + 1, their_num, ui)
-        in
-        process_lines new_mine new_their (ui_element :: acc) rest
-  in
+let rec process_lines (mine_num : int) (their_num : int) (acc : Nottui.ui list)
+    = function
+  | [] -> List.rev acc
+  | line :: rest ->
+      let new_mine, new_their, ui_element =
+        match line with
+        | `Common line ->
+            let ui =
+              W.string ~attr:Notty.A.empty
+                (Printf.sprintf "%2d %2d   %s" (mine_num + 1) (their_num + 1)
+                   line)
+            in
+            (mine_num + 1, their_num + 1, ui)
+        | `Their line ->
+            let ui =
+              W.string
+                ~attr:Notty.A.(fg green)
+                (Printf.sprintf "   %2d + %s" (their_num + 1) line)
+            in
+            (mine_num, their_num + 1, ui)
+        | `Mine line ->
+            let ui =
+              W.string
+                ~attr:Notty.A.(fg red)
+                (Printf.sprintf "%2d    - %s" (mine_num + 1) line)
+            in
+            (mine_num + 1, their_num, ui)
+      in
+      process_lines new_mine new_their (ui_element :: acc) rest
 
+let ui_unified_diff (hunk : Patch.hunk) : Nottui.ui =
   let lines_ui =
     process_lines hunk.Patch.mine_start hunk.Patch.their_start []
       hunk.Patch.lines

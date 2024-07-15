@@ -1,7 +1,89 @@
 open Nottui
 module W = Nottui_widgets
+module WordDiff = Simple_diff.Make (String)
 
-(* Implementation of Single View Mode *)
+type line = Change of string | Common of string | Empty
+
+type word_diff =
+  | CommonWord of string
+  | AddedWord of string
+  | DeletedWord of string
+
+let split_into_words (line : string) : string array =
+  let words = String.split_on_char ' ' line in
+  Array.of_list words
+
+let word_diff (s1 : string) (s2 : string) : WordDiff.diff list =
+  let words1 = split_into_words s1 in
+  let words2 = split_into_words s2 in
+  WordDiff.get_diff words1 words2
+
+let lcs xs' ys' =
+  let xs = Array.of_list xs' and ys = Array.of_list ys' in
+  let n = Array.length xs and m = Array.length ys in
+  let a = Array.make_matrix (n + 1) (m + 1) [] in
+  for i = n - 1 downto 0 do
+    for j = m - 1 downto 0 do
+      a.(i).(j) <-
+        (if xs.(i) = ys.(j) then xs.(i) :: a.(i + 1).(j + 1)
+         else if List.length a.(i).(j + 1) > List.length a.(i + 1).(j) then
+           a.(i).(j + 1)
+         else a.(i + 1).(j))
+    done
+  done;
+  a.(0).(0)
+
+let pad_and_append (orig_acc : line list) (changes : line list) (max_len : int)
+    : line list =
+  let rec pad_append (acc : line list) (i : int) : line list =
+    if i < max_len then
+      if i < List.length changes then
+        pad_append (List.nth changes i :: acc) (i + 1)
+      else pad_append (Empty :: acc) (i + 1)
+    else acc
+  in
+  pad_append orig_acc 0
+
+let split_and_align_hunk_diff (hunks : WordDiff.diff list) :
+    line list * line list =
+  let rec process_hunk (mine_acc : line list) (their_acc : line list) = function
+    | [] -> (List.rev mine_acc, List.rev their_acc)
+    | WordDiff.Equal line :: rest ->
+        let common_line = String.concat " " (Array.to_list line) in
+        process_hunk
+          (Common common_line :: mine_acc)
+          (Common common_line :: their_acc)
+          rest
+    | changes ->
+        let rec buffer_changes (mine : line list) (their : line list) = function
+          | WordDiff.Added line :: rest ->
+              let added_line = String.concat " " (Array.to_list line) in
+              buffer_changes (Change added_line :: mine) their rest
+          | WordDiff.Deleted line :: rest ->
+              let deleted_line = String.concat " " (Array.to_list line) in
+              buffer_changes mine (Change deleted_line :: their) rest
+          | remaining -> (List.rev mine, List.rev their, remaining)
+        in
+        let mine_changes, their_changes, rest = buffer_changes [] [] changes in
+        let max_len =
+          max (List.length mine_changes) (List.length their_changes)
+        in
+        let new_mine_acc = pad_and_append mine_acc mine_changes max_len in
+        let new_their_acc = pad_and_append their_acc their_changes max_len in
+        process_hunk new_mine_acc new_their_acc rest
+  in
+  process_hunk [] [] hunks
+
+let line_to_string = function Change s | Common s -> s | Empty -> ""
+
+let word_diff_to_ui (diff : word_diff) : Nottui.ui =
+  let attr, word =
+    match diff with
+    | CommonWord w -> (Notty.A.empty, w)
+    | AddedWord w -> (Notty.A.(fg green), w)
+    | DeletedWord w -> (Notty.A.(fg red), w)
+  in
+  W.string ~attr (word ^ " ")
 
 let ui_hunk_summary (hunk : Patch.hunk) : Nottui.ui =
   let mine_info =
@@ -31,54 +113,52 @@ let ui_hunk_summary (hunk : Patch.hunk) : Nottui.ui =
       at_symbols;
     ]
 
-let ui_unified_diff (hunk : Patch.hunk) : Nottui.ui =
-  let rec process_lines (mine_num : int) (their_num : int)
-      (acc : Nottui.ui list) = function
-    | [] -> List.rev acc
-    | line :: rest ->
-        let new_mine, new_their, ui_element =
-          match line with
-          | `Common line ->
-              let ui =
-                W.string ~attr:Notty.A.empty
-                  (Printf.sprintf "%2d %2d   %s" (mine_num + 1) (their_num + 1)
-                     line)
-              in
-              (mine_num + 1, their_num + 1, ui)
-          | `Their line ->
-              let ui =
-                W.string
-                  ~attr:Notty.A.(fg green)
-                  (Printf.sprintf "   %2d + %s" (their_num + 1) line)
-              in
-              (mine_num, their_num + 1, ui)
-          | `Mine line ->
-              let ui =
-                W.string
-                  ~attr:Notty.A.(fg red)
-                  (Printf.sprintf "%2d    - %s" (mine_num + 1) line)
-              in
-              (mine_num + 1, their_num, ui)
-        in
-        process_lines new_mine new_their (ui_element :: acc) rest
-  in
-
-  let lines_ui =
-    process_lines hunk.Patch.mine_start hunk.Patch.their_start []
-      hunk.Patch.lines
-  in
-  let lines_ui_vcat = Ui.vcat lines_ui in
-
-  Ui.vcat [ ui_hunk_summary hunk; lines_ui_vcat ]
-
-let current_hunks (z_patches : Patch.t Zipper.t) : Nottui.ui =
-  let p = Zipper.get_focus z_patches in
-  let hunks = List.map ui_unified_diff p.Patch.hunks in
-  Ui.vcat hunks
+(* let ui_unified_diff (hunk : Patch.hunk) : Nottui.ui = *)
+(*   let rec process_lines (mine_num : int) (their_num : int) *)
+(*       (acc : Nottui.ui list) = function *)
+(*     | [] -> List.rev acc *)
+(*     | line :: rest -> *)
+(*         let new_mine, new_their, ui_element = *)
+(*           match line with *)
+(*           | `Common line -> *)
+(*               let ui = *)
+(*                 W.string ~attr:Notty.A.empty *)
+(*                   (Printf.sprintf "%2d %2d   %s" (mine_num + 1) (their_num + 1) *)
+(*                      line) *)
+(*               in *)
+(*               (mine_num + 1, their_num + 1, ui) *)
+(*           | `Their line -> *)
+(*               let ui = *)
+(*                 W.string *)
+(*                   ~attr:Notty.A.(fg green) *)
+(*                   (Printf.sprintf "   %2d + %s" (their_num + 1) line) *)
+(*               in *)
+(*               (mine_num, their_num + 1, ui) *)
+(*           | `Mine line -> *)
+(*               let ui = *)
+(*                 W.string *)
+(*                   ~attr:Notty.A.(fg red) *)
+(*                   (Printf.sprintf "%2d    - %s" (mine_num + 1) line) *)
+(*               in *)
+(*               (mine_num + 1, their_num, ui) *)
+(*         in *)
+(*         process_lines new_mine new_their (ui_element :: acc) rest *)
+(*   in *)
+(**)
+(*   let lines_ui = *)
+(*     process_lines hunk.Patch.mine_start hunk.Patch.their_start [] *)
+(*       hunk.Patch.lines *)
+(*   in *)
+(*   let lines_ui_vcat = Ui.vcat lines_ui in *)
+(**)
+(*   Ui.vcat [ ui_hunk_summary hunk; lines_ui_vcat ] *)
+(**)
+(* let current_hunks (z_patches : Patch.t Zipper.t) : Nottui.ui = *)
+(*   let p = Zipper.get_focus z_patches in *)
+(*   let hunks = List.map ui_unified_diff p.Patch.hunks in *)
+(*   Ui.vcat hunks *)
 
 (** Side by side diff view implementation **)
-
-type line = Change of string | Common of string | Empty
 
 let split_and_align_hunk hunks : line list * line list =
   let rec process_hunk (mine_acc : line list) (their_acc : line list) = function

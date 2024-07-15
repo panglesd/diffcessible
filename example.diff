@@ -1,3 +1,15 @@
+--- a/sample.txt
++++ b/sample.txt
+@@ -1,2 +1,2 @@
+-foo bar baz
++foo bat bak
+@@ -4,2 +4,1 @@
+-The quick brown fox jumps over the lazy dog.
++The quick black cat jumps over the lazy dog.
+@@ -7,2 +6,2 @@
+-She sells sea shells by the sea shore.
++He sells sea shells by the sea floor.
+
 diff --git a/bin/dune b/bin/dune
 index fca70de..fd7f225 100644
 --- a/bin/dune

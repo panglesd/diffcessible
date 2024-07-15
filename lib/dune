@@ -1,3 +1,3 @@
 (library
  (name diffcessible)
- (libraries notty nottui lwd patch))
+ (libraries notty nottui lwd patch simple-diff))

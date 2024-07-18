@@ -1,26 +1,23 @@
-let lcs (xs : 'a array) (ys : 'a array) : 'a list =
-  let m = Array.length xs in
-  let n = Array.length ys in
-  let dp = Array.make_matrix (m + 1) (n + 1) 0 in
+module WordDiff = Simple_diff.Make (String)
 
-  for i = 1 to m do
-    for j = 1 to n do
-      if xs.(i - 1) = ys.(j - 1) then dp.(i).(j) <- dp.(i - 1).(j - 1) + 1
-      else dp.(i).(j) <- max dp.(i - 1).(j) dp.(i).(j - 1)
-    done
-  done;
+let string_to_words s = Array.of_list (String.split_on_char ' ' s)
+let words_to_string words = String.concat " " (Array.to_list words)
 
-  let rec backtrack i j acc =
-    if i = 0 || j = 0 then acc
-    else if xs.(i - 1) = ys.(j - 1) then
-      backtrack (i - 1) (j - 1) (xs.(i - 1) :: acc)
-    else if dp.(i - 1).(j) > dp.(i).(j - 1) then backtrack (i - 1) j acc
-    else backtrack i (j - 1) acc
-  in
-  backtrack m n []
+let diff_words s1 s2 =
+  let words1 = string_to_words s1 in
+  let words2 = string_to_words s2 in
+  WordDiff.get_diff words1 words2
 
-let () =
-  let xs = [| "A"; "B"; "C"; "D"; "E"; "F" |] in
-  let ys = [| "A"; "B"; "C" |] in
-  let lcs_result = lcs xs ys in
-  List.iter print_endline lcs_result
+type word_diff =
+  | WDeleted of string array
+  | WAdded of string array
+  | WEqual of string array
+
+let apply_word_diff s1 s2 =
+  let diff = diff_words s1 s2 in
+  List.map
+    (function
+      | WordDiff.Deleted words -> WDeleted words
+      | WordDiff.Added words -> WAdded words
+      | WordDiff.Equal words -> WEqual words)
+    diff

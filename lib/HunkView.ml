@@ -126,6 +126,7 @@ let ui_hunk_summary (hunk : Patch.hunk) : Nottui.ui =
       at_symbols;
     ]
 
+
 let ui_unified_diff (hunk : Patch.hunk) : Nottui.ui =
   let mine, their = split_and_align_hunk hunk.Patch.lines in
   let constructed_hunk = construct_hunk mine their in

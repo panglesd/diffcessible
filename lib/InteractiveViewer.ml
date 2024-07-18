@@ -92,8 +92,8 @@ let view (patches : Patch.t list) =
   in
   Lwd.return ui
 
-let start patch =
-  Ui_loop.run ~quit ~tick_period:0.2 (Lwd.bind ~f:Lwd.join (view patch))
+let start ?term patch =
+  Ui_loop.run ?term ~quit ~tick_period:0.2 (Lwd.bind ~f:Lwd.join (view patch))
 
 (* Tests *)
 let start_test patch events width height =

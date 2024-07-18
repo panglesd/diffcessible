@@ -126,48 +126,51 @@ let ui_hunk_summary (hunk : Patch.hunk) : Nottui.ui =
       at_symbols;
     ]
 
+let process_line (hunk : Patch.hunk) i line =
+  let line_number =
+    W.string
+      ~attr:Notty.A.(fg yellow)
+      (Printf.sprintf "%4d " (succ (hunk.Patch.mine_start + i)))
+  in
+  match line with
+  | Common s ->
+      let content = W.string s in
+      Ui.hcat [ line_number; content ]
+  | Change (_, word_diffs) ->
+      let word_uis =
+        List.map
+          (function
+            | WDeleted words ->
+                W.string
+                  ~attr:Notty.A.(bg red ++ fg white)
+                  (words_to_string words)
+            | WAdded words ->
+                W.string
+                  ~attr:Notty.A.(bg green ++ fg black)
+                  (words_to_string words)
+            | WEqual words -> W.string (words_to_string words))
+          word_diffs
+      in
+      let space = W.string " " in
+      let content =
+        Ui.hcat
+          (List.fold_left (fun acc ui -> ui :: space :: acc) [] word_uis
+          |> List.rev)
+      in
+      Ui.hcat [ line_number; content ]
+  | Empty -> W.string ""
+
+let rec process_lines hunk i = function
+  | [] -> []
+  | line :: rest ->
+      let line_ui = process_line hunk i line in
+      line_ui :: process_lines hunk (succ i) rest
+
 let ui_unified_diff (hunk : Patch.hunk) : Nottui.ui =
   let mine, their = split_and_align_hunk hunk.Patch.lines in
   let constructed_hunk = construct_hunk mine their in
 
-  let process_line i line =
-    let line_number =
-      W.string
-        ~attr:Notty.A.(fg yellow)
-        (Printf.sprintf "%4d " (succ (hunk.Patch.mine_start + i)))
-    in
-    match line with
-    | Common s ->
-        let content = W.string s in
-        Ui.hcat [ line_number; content ]
-    | Change (_, word_diffs) ->
-        let word_uis =
-          List.map
-            (function
-              | WDeleted words ->
-                  W.string
-                    ~attr:Notty.A.(bg red ++ fg white)
-                    (words_to_string words)
-              | WAdded words ->
-                  W.string
-                    ~attr:Notty.A.(bg green ++ fg black)
-                    (words_to_string words)
-              | WEqual words -> W.string (words_to_string words))
-            word_diffs
-        in
-        let space = W.string " " in
-        let content =
-          Ui.hcat
-            (List.fold_left (fun acc ui -> ui :: space :: acc) [] word_uis
-            |> List.rev)
-        in
-        Ui.hcat [ line_number; content ]
-    | Empty -> W.string ""
-  in
-
-  let line_uis = List.mapi process_line constructed_hunk in
-  let body = Ui.vcat line_uis in
-
+  let body = Ui.vcat (process_lines hunk 0 constructed_hunk) in
   let summary = ui_hunk_summary hunk in
 
   Ui.vcat [ summary; body ]

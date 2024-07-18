@@ -23,6 +23,7 @@
   dune
   cmdliner
   seq
+  extunix
   (notty
    (>= 0.2)))
  (tags

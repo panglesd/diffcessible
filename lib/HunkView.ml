@@ -3,76 +3,100 @@ module W = Nottui_widgets
 
 (* Common Functions *)
 
-type diff = Equal | Added | Deleted
-type word = diff * string
+module WordDiff = Simple_diff.Make (String)
 
-type assembled_line =
-  | CommonWord of word list
-  | MineWord of word list
-  | TheirWord of word list
+let string_to_words s = Array.of_list (String.split_on_char ' ' s)
+let words_to_string words = String.concat " " (Array.to_list words)
 
-type hunk = assembled_line list
-type line = Change of string | Common of string | Empty
+let diff_words s1 s2 =
+  let words1 = string_to_words s1 in
+  let words2 = string_to_words s2 in
+  WordDiff.get_diff words1 words2
 
-let collect_lines hunks : line list * line list =
-  let rec process mine_acc their_acc = function
+type word_diff =
+  | WDeleted of string array
+  | WAdded of string array
+  | WEqual of string array
+
+type line = Change of string * word_diff list | Common of string | Empty
+
+let line_to_string = function Change (s, _) -> s | Common s -> s | Empty -> ""
+
+let apply_word_diff s1 s2 =
+  let diff = diff_words s1 s2 in
+  List.map
+    (function
+      | WordDiff.Deleted words -> WDeleted words
+      | WordDiff.Added words -> WAdded words
+      | WordDiff.Equal words -> WEqual words)
+    diff
+
+let construct_hunk mine their =
+  let rec aux acc = function
+    | [], [] -> List.rev acc
+    | Common s1 :: rest1, Common s2 :: rest2 when s1 = s2 ->
+        aux (Common s1 :: acc) (rest1, rest2)
+    | Change (s1, _) :: rest1, Change (s2, _) :: rest2 ->
+        let word_diff = apply_word_diff s1 s2 in
+        aux (Change (s1, word_diff) :: acc) (rest1, rest2)
+    | Empty :: rest1, Empty :: rest2 -> aux (Empty :: acc) (rest1, rest2)
+    | l1 :: rest1, l2 :: rest2 ->
+        let s1 = line_to_string l1 in
+        let s2 = line_to_string l2 in
+        let word_diff = apply_word_diff s1 s2 in
+        aux (Change (s1, word_diff) :: acc) (rest1, rest2)
+    | rest1, [] ->
+        List.rev_append acc
+          (List.map
+             (function
+               | Common s -> Change (s, [ WDeleted (string_to_words s) ])
+               | Change (s, _) -> Change (s, [ WDeleted (string_to_words s) ])
+               | l -> l)
+             rest1)
+    | [], rest2 ->
+        List.rev_append acc
+          (List.map
+             (function
+               | Common s -> Change (s, [ WAdded (string_to_words s) ])
+               | Change (s, _) -> Change (s, [ WAdded (string_to_words s) ])
+               | l -> l)
+             rest2)
+  in
+  aux [] (mine, their)
+
+let split_and_align_hunk hunks : line list * line list =
+  let rec process_hunk (mine_acc : line list) (their_acc : line list) = function
     | [] -> (List.rev mine_acc, List.rev their_acc)
-    | `Mine line :: rest -> process (Change line :: mine_acc) their_acc rest
-    | `Their line :: rest -> process mine_acc (Change line :: their_acc) rest
-    | `Common _ :: rest -> process mine_acc their_acc rest
-  in
-  process [] [] hunks
-
-let line_to_words (line : line) : string list =
-  match line with
-  | Change s | Common s -> String.split_on_char ' ' s
-  | Empty -> []
-
-let lines_to_words (lines : line list) : string list =
-  List.concat_map line_to_words lines
-
-(* Word diffing module *)
-module WordDiff = struct
-  type t = string
-
-  let compare = String.compare
-end
-
-module Simple_diff_word = Simple_diff.Make (WordDiff)
-
-let diff_to_assembled_lines (diff : Simple_diff_word.diff list) :
-    assembled_line list =
-  let rec process acc = function
-    | [] -> List.rev acc
-    | Simple_diff_word.Equal words :: rest ->
-        let common =
-          CommonWord (Array.to_list words |> List.map (fun w -> (Equal, w)))
+    | `Common line :: rest ->
+        process_hunk (Common line :: mine_acc) (Common line :: their_acc) rest
+    | changes ->
+        let rec buffer_changes (mine : line list) (their : line list) = function
+          | `Mine line :: rest ->
+              buffer_changes (Change (line, []) :: mine) their rest
+          | `Their line :: rest ->
+              buffer_changes mine (Change (line, []) :: their) rest
+          | remaining -> (List.rev mine, List.rev their, remaining)
         in
-        process (common :: acc) rest
-    | Simple_diff_word.Deleted words :: rest ->
-        let mine =
-          MineWord (Array.to_list words |> List.map (fun w -> (Deleted, w)))
+        let mine_changes, their_changes, rest = buffer_changes [] [] changes in
+        let max_len =
+          max (List.length mine_changes) (List.length their_changes)
         in
-        process (mine :: acc) rest
-    | Simple_diff_word.Added words :: rest ->
-        let their =
-          TheirWord (Array.to_list words |> List.map (fun w -> (Added, w)))
+        let pad_and_append (orig_acc : line list) (changes : line list) :
+            line list =
+          let rec pad_append (acc : line list) (i : int) : line list =
+            if i < max_len then
+              if i < List.length changes then
+                pad_append (List.nth changes i :: acc) (i + 1)
+              else pad_append (Empty :: acc) (i + 1)
+            else List.rev acc
+          in
+          orig_acc @ pad_append [] 0
         in
-        process (their :: acc) rest
+        let new_mine_acc = pad_and_append mine_acc mine_changes in
+        let new_their_acc = pad_and_append their_acc their_changes in
+        process_hunk new_mine_acc new_their_acc rest
   in
-  process [] diff
-
-let process_hunk (hunk : Patch.hunk) : hunk =
-  let mine_lines, their_lines = collect_lines hunk.Patch.lines in
-  let mine_words = lines_to_words mine_lines in
-  let their_words = lines_to_words their_lines in
-
-  let diff =
-    Simple_diff_word.get_diff (Array.of_list mine_words)
-      (Array.of_list their_words)
-  in
-
-  diff_to_assembled_lines diff
+  process_hunk [] [] hunks
 
 let ui_hunk_summary (hunk : Patch.hunk) : Nottui.ui =
   let mine_info =
@@ -102,92 +126,51 @@ let ui_hunk_summary (hunk : Patch.hunk) : Nottui.ui =
       at_symbols;
     ]
 
-module A = Notty.A
-
-(* Helper function to create a styled word *)
-let styled_word (d, w) =
-  match d with
-  | Deleted -> W.string ~attr:A.(fg red ++ st bold) w
-  | Added -> W.string ~attr:A.(fg green ++ st bold) w
-  | Equal -> W.string w
-
-(* Helper function to create a line number *)
-let line_number n attr = W.string ~attr (Printf.sprintf "%3d " n)
-
-(* Helper function to create a line prefix *)
-let line_prefix c attr = W.string ~attr (Printf.sprintf "%c " c)
-
 let ui_unified_diff (hunk : Patch.hunk) : Nottui.ui =
-  let processed_hunk = process_hunk hunk in
-  let rec render_lines (mine_num : int) (their_num : int) (acc : Nottui.ui list)
-      = function
-    | [] -> List.rev acc
-    | CommonWord words :: rest ->
-        let line = Ui.hcat (List.map styled_word words) in
-        let ui =
-          Ui.hcat
-            [
-              line_number mine_num A.empty;
-              line_number their_num A.empty;
-              line_prefix ' ' A.empty;
-              line;
-            ]
+  let mine, their = split_and_align_hunk hunk.Patch.lines in
+  let constructed_hunk = construct_hunk mine their in
+
+  let process_line i line =
+    let line_number =
+      W.string
+        ~attr:Notty.A.(fg yellow)
+        (Printf.sprintf "%4d " (succ (hunk.Patch.mine_start + i)))
+    in
+    match line with
+    | Common s ->
+        let content = W.string s in
+        Ui.hcat [ line_number; content ]
+    | Change (_, word_diffs) ->
+        let word_uis =
+          List.map
+            (function
+              | WDeleted words ->
+                  W.string
+                    ~attr:Notty.A.(bg red ++ fg white)
+                    (words_to_string words)
+              | WAdded words ->
+                  W.string
+                    ~attr:Notty.A.(bg green ++ fg black)
+                    (words_to_string words)
+              | WEqual words -> W.string (words_to_string words))
+            word_diffs
         in
-        render_lines (mine_num + 1) (their_num + 1) (ui :: acc) rest
-    | MineWord words :: TheirWord their_words :: rest ->
-        let mine_line = Ui.hcat (List.map styled_word words) in
-        let their_line = Ui.hcat (List.map styled_word their_words) in
-        let mine_ui =
+        let space = W.string " " in
+        let content =
           Ui.hcat
-            [
-              line_number mine_num A.(fg red);
-              line_number their_num A.empty;
-              line_prefix '-' A.(fg red);
-              mine_line;
-            ]
+            (List.fold_left (fun acc ui -> ui :: space :: acc) [] word_uis
+            |> List.rev)
         in
-        let their_ui =
-          Ui.hcat
-            [
-              line_number mine_num A.empty;
-              line_number (their_num + 1) A.(fg green);
-              line_prefix '+' A.(fg green);
-              their_line;
-            ]
-        in
-        render_lines (mine_num + 1) (their_num + 1)
-          (their_ui :: mine_ui :: acc)
-          rest
-    | MineWord words :: rest ->
-        let line = Ui.hcat (List.map styled_word words) in
-        let ui =
-          Ui.hcat
-            [
-              line_number mine_num A.(fg red);
-              line_number their_num A.empty;
-              line_prefix '-' A.(fg red);
-              line;
-            ]
-        in
-        render_lines (mine_num + 1) their_num (ui :: acc) rest
-    | TheirWord words :: rest ->
-        let line = Ui.hcat (List.map styled_word words) in
-        let ui =
-          Ui.hcat
-            [
-              line_number mine_num A.empty;
-              line_number their_num A.(fg green);
-              line_prefix '+' A.(fg green);
-              line;
-            ]
-        in
-        render_lines mine_num (their_num + 1) (ui :: acc) rest
+        Ui.hcat [ line_number; content ]
+    | Empty -> W.string ""
   in
-  let lines_ui =
-    render_lines hunk.Patch.mine_start hunk.Patch.their_start [] processed_hunk
-  in
-  let lines_ui_vcat = Ui.vcat lines_ui in
-  Ui.vcat [ ui_hunk_summary hunk; lines_ui_vcat ]
+
+  let line_uis = List.mapi process_line constructed_hunk in
+  let body = Ui.vcat line_uis in
+
+  let summary = ui_hunk_summary hunk in
+
+  Ui.vcat [ summary; body ]
 
 let current_hunks (z_patches : Patch.t Zipper.t) : Nottui.ui =
   let p = Zipper.get_focus z_patches in
@@ -195,40 +178,6 @@ let current_hunks (z_patches : Patch.t Zipper.t) : Nottui.ui =
   Ui.vcat hunks
 
 (** Side by side diff view implementation **)
-
-let split_and_align_hunk hunks : line list * line list =
-  let rec process_hunk (mine_acc : line list) (their_acc : line list) = function
-    | [] -> (List.rev mine_acc, List.rev their_acc)
-    | `Common line :: rest ->
-        process_hunk (Common line :: mine_acc) (Common line :: their_acc) rest
-    | changes ->
-        let rec buffer_changes (mine : line list) (their : line list) = function
-          | `Mine line :: rest ->
-              buffer_changes (Change line :: mine) their rest
-          | `Their line :: rest ->
-              buffer_changes mine (Change line :: their) rest
-          | remaining -> (List.rev mine, List.rev their, remaining)
-        in
-        let mine_changes, their_changes, rest = buffer_changes [] [] changes in
-        let max_len =
-          max (List.length mine_changes) (List.length their_changes)
-        in
-        let pad_and_append (orig_acc : line list) (changes : line list) :
-            line list =
-          let rec pad_append (acc : line list) (i : int) : line list =
-            if i < max_len then
-              if i < List.length changes then
-                pad_append (List.nth changes i :: acc) (i + 1)
-              else pad_append (Empty :: acc) (i + 1)
-            else acc
-          in
-          pad_append orig_acc 0
-        in
-        let new_mine_acc = pad_and_append mine_acc mine_changes in
-        let new_their_acc = pad_and_append their_acc their_changes in
-        process_hunk new_mine_acc new_their_acc rest
-  in
-  process_hunk [] [] hunks
 
 let lines_with_numbers (lines : line list) (attr_change : Notty.attr)
     (prefix : string) : Nottui.ui list =
@@ -240,7 +189,7 @@ let lines_with_numbers (lines : line list) (attr_change : Notty.attr)
           | Common s ->
               let content = Printf.sprintf "%3d   %s" line_num s in
               (content, Notty.A.empty, line_num + 1)
-          | Change s ->
+          | Change (s, _) ->
               let content = Printf.sprintf "%3d %s %s" line_num prefix s in
               (content, attr_change, line_num + 1)
           | Empty ->

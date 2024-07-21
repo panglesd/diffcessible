@@ -3,18 +3,14 @@ module W = Nottui_widgets
 
 (* Common Functions *)
 
-type diff = Equal | Added | Deleted
-type word = diff * string
-
-type assembled_line =
-  | CommonWord of word list
-  | MineWord of word list
-  | TheirWord of word list
-
-type hunk = assembled_line list
+(* type diff = Equal | Added | Deleted *)
+(* type word = diff * string *)
+(* type assembled_line = *)
+(*   | CommonWord of word list *)
+(*   | MineWord of word list *)
+(*   | TheirWord of word list *)
+(* type hunk = assembled_line list *)
 type line = Change of string | Common of string | Empty
-
-let line_to_string = function Change s -> s | Common s -> s | Empty -> ""
 
 let split_and_align_hunk hunks : line list * line list =
   let rec process_hunk mine_acc their_acc = function

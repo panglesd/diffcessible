@@ -2,7 +2,49 @@ This is a cram test for the new executable.
 
 # Run the executable
   $ dummy_terminal example.diff h q
-  Operation 1 of 14, 1 hunk
+  Operation 1 of 16, 8 hunks
+  10 additions, 9 removals
+  Rename with modifications a/document.txt to b/document.txt
+  @@ -1,5 +1,5 @@
+   1    - The quick brown fox jumps dog. the lazy dog. 
+      1 + The fast brown fox leaps over the sleeping dog.  
+   2  2   She sells seashells by the seashore. 
+   3    -  mainly rain in Spain stays mainly on the plain. 
+      3 + The rain in France falls mainly  on the plain. 
+   4  4   To be or not to be, that is the question. 
+   5    - All gold. glitters is not gold. 
+      5 + Not all that glitters is gold.  
+  @@ -7,3 +7,3 @@
+   7  7   A stitch in time saves nine. 
+   8    - An apple a day keeps the doctor away. 
+      8 + An apple each day keeps the doctor away. 
+   9  9   Actions speak louder than words. 
+  @@ -11,2 +11,2 @@
+  11    - The early bird catches the worm. 
+  Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation. Press 't' to toggle view mode.
+  $ dummy_terminal example.diff n
+  Operation 2 of 16, 3 hunks
+  3 additions, 3 removals
+  Rename with modifications a/sample.txt to b/sample.txt
+  @@ -1,2 +1,2 @@
+   1    - foo bar baz 
+      1 + foo bat bak 
+  @@ -4,2 +4,1 @@
+   4    - The quick brown fox jumps over the lazy dog. 
+      4 + The quick black cat jumps over the lazy dog. 
+  @@ -7,2 +6,2 @@
+   7    - She the sea shells by the sea shore. 
+      6 + He sells sea shells by the sea floor. 
+  
+  
+  
+  
+  
+  
+  
+  Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation. Press 't' to toggle view mode.
+  $ dummy_terminal example.diff n n
+  Operation 3 of 16, 1 hunk
   1 addition, 1 removal
   Modification of bin/dune
   @@ -1,4 +1,4 @@
@@ -11,48 +53,6 @@ This is a cram test for the new executable.
    3  3    (name main) 
    4    -  (libraries diffcessible cmdliner)) 
       4 +  (libraries diffcessible cmdliner patch)) 
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation. Press 't' to toggle view mode.
-  $ dummy_terminal example.diff n
-  Operation 2 of 14, 1 hunk
-  3 additions, 1 removal
-  Modification of bin/main.ml
-  @@ -1,7 +1,9 @@
-   1  1   open Diffcessible 
-   2  2    
-   3  3   let main () = 
-   4    -    Interactive_viewer.start () 
-      4 +   let s = In_channel.input_all In_channel.stdin in 
-      5 +   let patch = Patch.to_diffs s in 
-      6 +   Interactive_viewer.start patch 
-   5  7    
-   6  8   open Cmdliner 
-   7  9    
-  
-  
-  
-  
-  
-  Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation. Press 't' to toggle view mode.
-  $ dummy_terminal example.diff n n
-  Operation 3 of 14, 1 hunk
-  1 addition, 1 removal
-  Modification of lib/dune
-  @@ -1,3 +1,3 @@
-   1  1   (library 
-   2  2    (name diffcessible) 
-   3    -  (libraries notty nottui lwd)) 
-      3 +  (libraries notty nottui lwd patch)) 
-  
   
   
   
@@ -179,7 +179,52 @@ This is a cram test for the new executable.
   Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation. Press 't' to toggle view mode.
 
   $ dummy_terminal example.diff n n t
-  Operation 3 of 14, 1 hunk
+  Operation 3 of 16, 1 hunk
+  1 addition, 1 removal
+  Modification of bin/dune
+  @@ -1,4 @@                                                                  @@ +1,4 @@
+    1   (executable                                                             1   (executable
+    2    (public_name diffcessible)                                             2    (public_name diffcessible)
+    3    (name main)                                                            3    (name main)
+    4 -  (libraries diffcessible cmdliner))                                     4 +  (libraries diffcessible cmdliner patch))
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation. Press 't' to toggle view mode.
+
+  $ dummy_terminal example.diff n n n t
+  Operation 4 of 16, 1 hunk
+  3 additions, 1 removal
+  Modification of bin/main.ml
+  @@ -1,7 @@                                                                  @@ +1,9 @@
+    1   open Diffcessible                                                       1   open Diffcessible
+    2                                                                           2   
+    3   let main () =                                                           3   let main () =
+    4 -   Interactive_viewer.start ()                                           4 +   let s = In_channel.input_all In_channel.stdin in
+                                                                                5 +   let patch = Patch.to_diffs s in
+                                                                                6 +   Interactive_viewer.start patch
+    5                                                                           7   
+    6   open Cmdliner                                                           8   open Cmdliner
+    7                                                                           9   
+  
+  
+  
+  
+  
+  
+  Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation. Press 't' to toggle view mode.
+
+
+  $ dummy_terminal example.diff n n n n t
+  Operation 5 of 16, 1 hunk
   1 addition, 1 removal
   Modification of lib/dune
   @@ -1,3 @@                                                                  @@ +1,3 @@
@@ -200,8 +245,9 @@ This is a cram test for the new executable.
   
   Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation. Press 't' to toggle view mode.
 
-  $ dummy_terminal example.diff n n n t
-  Operation 4 of 14, 1 hunk
+
+  $ dummy_terminal example.diff n n n n n t
+  Operation 6 of 16, 1 hunk
   6 additions, 20 removals
   Modification of lib/interactive_viewer.ml
   @@ -1,39 @@                                                                 @@ +1,25 @@
@@ -222,32 +268,8 @@ This is a cram test for the new executable.
    15 - let counter_d = Lwd.get counter                                             
   Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation. Press 't' to toggle view mode.
 
-
-  $ dummy_terminal example.diff n n n n t
-  Operation 5 of 14, 1 hunk
-  1 addition, 3 removals
-  Modification of lib/interactive_viewer.mli
-  @@ -1,5 @@                                                                  @@ +1,3 @@
-    1   (** Render and navigate through a diff. *)                              1   (** Render and navigate through a diff. *)
-    2                                                                           2   
-    3 - type patch = unit                                                       3 + val start : Patch.t list -> unit
-    4 -                                                                             
-    5 - val start : patch -> unit                                                   
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation. Press 't' to toggle view mode.
-
-
-  $ dummy_terminal example.diff n n n n n t
-  Operation 6 of 14, 1 hunk
+  $ dummy_terminal example.diff n n n n n n n t
+  Operation 8 of 16, 1 hunk
   1 addition, 1 removal
   Rename with modifications dir1/file.txt to dir2/file.txt
   @@ -1,1 @@                                                                  @@ +1,1 @@
@@ -268,8 +290,8 @@ This is a cram test for the new executable.
   
   Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation. Press 't' to toggle view mode.
 
-  $ dummy_terminal example.diff n n n n n n n t
-  Operation 8 of 14, 1 hunk
+  $ dummy_terminal example.diff n n n n n n n n n t
+  Operation 10 of 16, 1 hunk
   2 additions, 1 removal
   Rename with modifications dir1/file.txt to dir2/file.txt
   @@ -1,1 @@                                                                  @@ +1,2 @@
@@ -290,35 +312,13 @@ This is a cram test for the new executable.
   
   Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation. Press 't' to toggle view mode.
 
-  $ dummy_terminal example.diff n n n n n n n n n t
-  Operation 10 of 14, 1 hunk
-  0 additions, 1 removal
-  Deletion of dir1/file.txt
-  @@ -1,1 @@                                                                  @@ +0,0 @@
-    1 - some text                                                                   
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation. Press 't' to toggle view mode.
-
   $ dummy_terminal example.diff n n n n n n n n n n n n t
-  Operation 13 of 14, 1 hunk
-  2 additions, 0 removals
-  Creation of dir2/sample.txt
-  @@ -0,0 @@                                                                  @@ +1,2 @@
-                                                                                1 + some text
-                                                                                2 + lorem ipsum
+  Operation 13 of 16, 0 hunks
+  0 additions, 0 removals
+  Rename dir1/file.txt to dir2/new_file.txt
+  
+  
+  
   
   
   
@@ -335,7 +335,7 @@ This is a cram test for the new executable.
   Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation. Press 't' to toggle view mode.
 
   $ dummy_terminal example.diff n n n n n n n n n n n n n n n t
-  Operation 14 of 14, 1 hunk
+  Operation 16 of 16, 1 hunk
   1 addition, 0 removals
   Rename with modifications dir1/file.txt to dir2/file.txt
   @@ -0,0 @@                                                                  @@ +1,1 @@
@@ -358,7 +358,7 @@ This is a cram test for the new executable.
 
 
   $ dummy_terminal example.diff n n n n n n n n n n n n n n n n t
-  Operation 14 of 14, 1 hunk
+  Operation 16 of 16, 1 hunk
   1 addition, 0 removals
   Rename with modifications dir1/file.txt to dir2/file.txt
   @@ -0,0 @@                                                                  @@ +1,1 @@

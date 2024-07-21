@@ -127,6 +127,50 @@ let process_lines hunk =
           match (m, t) with
           | Common m_text, Common t_text when m_text = t_text ->
               line_to_ui mine_num their_num (Common m_text)
+          | Common m_text, Common t_text ->
+              (* Handle the case where Common lines are different *)
+              let diff = apply_word_diff m_text t_text in
+              let mine_ui =
+                Ui.hcat
+                  (List.map
+                     (function
+                       | WDeleted words ->
+                           word_to_ui (words_to_string words) Notty.A.(fg red)
+                       | WEqual words ->
+                           word_to_ui (words_to_string words) Notty.A.empty
+                       | WAdded _ -> Ui.empty)
+                     diff)
+              in
+              let their_ui =
+                Ui.hcat
+                  (List.map
+                     (function
+                       | WAdded words ->
+                           word_to_ui (words_to_string words) Notty.A.(fg green)
+                       | WEqual words ->
+                           word_to_ui (words_to_string words) Notty.A.empty
+                       | WDeleted _ -> Ui.empty)
+                     diff)
+              in
+              ( mine_num + 1,
+                their_num + 1,
+                Ui.vcat
+                  [
+                    Ui.hcat
+                      [
+                        W.string
+                          ~attr:Notty.A.(fg red)
+                          (Printf.sprintf "%2d    - " (mine_num + 1));
+                        mine_ui;
+                      ];
+                    Ui.hcat
+                      [
+                        W.string
+                          ~attr:Notty.A.(fg green)
+                          (Printf.sprintf "   %2d + " (their_num + 1));
+                        their_ui;
+                      ];
+                  ] )
           | Change m_text, Change t_text ->
               let diff = apply_word_diff m_text t_text in
               let mine_ui =
@@ -170,11 +214,50 @@ let process_lines hunk =
                         their_ui;
                       ];
                   ] )
+          | Change m_text, Empty ->
+              let diff = apply_word_diff m_text "" in
+              let mine_ui =
+                Ui.hcat
+                  (List.map
+                     (function
+                       | WDeleted words ->
+                           word_to_ui (words_to_string words) Notty.A.(fg red)
+                       | _ -> Ui.empty)
+                     diff)
+              in
+              ( mine_num + 1,
+                their_num,
+                Ui.hcat
+                  [
+                    W.string
+                      ~attr:Notty.A.(fg red)
+                      (Printf.sprintf "%2d    - " (mine_num + 1));
+                    mine_ui;
+                  ] )
+          | Empty, Change t_text ->
+              let diff = apply_word_diff "" t_text in
+              let their_ui =
+                Ui.hcat
+                  (List.map
+                     (function
+                       | WAdded words ->
+                           word_to_ui (words_to_string words) Notty.A.(fg green)
+                       | _ -> Ui.empty)
+                     diff)
+              in
+              ( mine_num,
+                their_num + 1,
+                Ui.hcat
+                  [
+                    W.string
+                      ~attr:Notty.A.(fg green)
+                      (Printf.sprintf "   %2d + " (their_num + 1));
+                    their_ui;
+                  ] )
           | _ -> line_to_ui mine_num their_num m
         in
         aux new_mine new_their (ui_element :: acc) (m_rest, t_rest)
-    | _, _ ->
-        List.rev acc (* This case should not happen if aligned correctly *)
+    | _, _ -> List.rev acc
   in
   aux hunk.Patch.mine_start hunk.Patch.their_start [] (mine, their)
 

@@ -1,16 +1,16 @@
 open Nottui
 module W = Nottui_widgets
 
-(* Common Functions *)
+(* Types *)
 
-(* type diff = Equal | Added | Deleted *)
-(* type word = diff * string *)
-(* type assembled_line = *)
-(*   | CommonWord of word list *)
-(*   | MineWord of word list *)
-(*   | TheirWord of word list *)
-(* type hunk = assembled_line list *)
 type line = Change of string | Common of string | Empty
+
+type word_diff =
+  | WDeleted of string array
+  | WAdded of string array
+  | WEqual of string array
+
+(* Utility Functions *)
 
 let split_and_align_hunk hunks : line list * line list =
   let rec process_hunk mine_acc their_acc = function
@@ -50,11 +50,6 @@ let diff_words s1 s2 =
   let words2 = string_to_words s2 in
   WordDiff.WordDiff.get_diff words1 words2
 
-type word_diff =
-  | WDeleted of string array
-  | WAdded of string array
-  | WEqual of string array
-
 let apply_word_diff s1 s2 =
   let diff = diff_words s1 s2 in
   List.map
@@ -64,7 +59,7 @@ let apply_word_diff s1 s2 =
       | WordDiff.WordDiff.Equal words -> WEqual words)
     diff
 
-(* UI functions *)
+(* UI Functions *)
 
 let ui_hunk_summary (hunk : Patch.hunk) : Nottui.ui =
   let mine_info =

@@ -5,11 +5,6 @@ module W = Nottui_widgets
 
 type line = Change of string | Common of string | Empty
 
-type word_diff =
-  | WDeleted of string array
-  | WAdded of string array
-  | WEqual of string array
-
 (* Utility Functions *)
 
 let split_and_align_hunk hunks : line list * line list =
@@ -42,23 +37,6 @@ let split_and_align_hunk hunks : line list * line list =
   in
   process_hunk [] [] hunks
 
-let string_to_words s = Array.of_list (String.split_on_char ' ' s)
-let words_to_string words = String.concat " " (Array.to_list words)
-
-let diff_words s1 s2 =
-  let words1 = string_to_words s1 in
-  let words2 = string_to_words s2 in
-  WordDiff.WordDiff.get_diff words1 words2
-
-let apply_word_diff s1 s2 =
-  let diff = diff_words s1 s2 in
-  List.map
-    (function
-      | WordDiff.WordDiff.Deleted words -> WDeleted words
-      | WordDiff.WordDiff.Added words -> WAdded words
-      | WordDiff.WordDiff.Equal words -> WEqual words)
-    diff
-
 (* UI Functions *)
 
 let ui_hunk_summary (hunk : Patch.hunk) : Nottui.ui =
@@ -89,172 +67,34 @@ let ui_hunk_summary (hunk : Patch.hunk) : Nottui.ui =
       at_symbols;
     ]
 
-let word_to_ui word attr = W.string ~attr (word ^ " ")
-
-let line_to_ui mine_num their_num line =
-  match line with
-  | Common text ->
-      let ui =
-        W.string ~attr:Notty.A.empty
-          (Printf.sprintf "%2d %2d   %s" (mine_num + 1) (their_num + 1) text)
-      in
-      (mine_num + 1, their_num + 1, ui)
-  | Change text ->
-      let mine_ui =
-        W.string
-          ~attr:Notty.A.(fg red)
-          (Printf.sprintf "%2d    - %s" (mine_num + 1) text)
-      in
-      let their_ui =
-        W.string
-          ~attr:Notty.A.(fg green)
-          (Printf.sprintf "   %2d + %s" (their_num + 1) text)
-      in
-      (mine_num + 1, their_num + 1, Ui.vcat [ mine_ui; their_ui ])
-  | Empty -> (mine_num, their_num, W.string "")
-
 let process_lines hunk =
   let mine, their = split_and_align_hunk hunk.Patch.lines in
-  let rec aux mine_num their_num acc = function
-    | [], [] -> List.rev acc
-    | m :: m_rest, t :: t_rest ->
-        let new_mine, new_their, ui_element =
-          match (m, t) with
-          | Common m_text, Common t_text when m_text = t_text ->
-              line_to_ui mine_num their_num (Common m_text)
-          | Common m_text, Common t_text ->
-              (* Handle the case where Common lines are different *)
-              let diff = apply_word_diff m_text t_text in
-              let mine_ui =
-                Ui.hcat
-                  (List.map
-                     (function
-                       | WDeleted words ->
-                           word_to_ui (words_to_string words) Notty.A.(fg red)
-                       | WEqual words ->
-                           word_to_ui (words_to_string words) Notty.A.empty
-                       | WAdded _ -> Ui.empty)
-                     diff)
-              in
-              let their_ui =
-                Ui.hcat
-                  (List.map
-                     (function
-                       | WAdded words ->
-                           word_to_ui (words_to_string words) Notty.A.(fg green)
-                       | WEqual words ->
-                           word_to_ui (words_to_string words) Notty.A.empty
-                       | WDeleted _ -> Ui.empty)
-                     diff)
-              in
-              ( mine_num + 1,
-                their_num + 1,
-                Ui.vcat
-                  [
-                    Ui.hcat
-                      [
-                        W.string
-                          ~attr:Notty.A.(fg red)
-                          (Printf.sprintf "%2d    - " (mine_num + 1));
-                        mine_ui;
-                      ];
-                    Ui.hcat
-                      [
-                        W.string
-                          ~attr:Notty.A.(fg green)
-                          (Printf.sprintf "   %2d + " (their_num + 1));
-                        their_ui;
-                      ];
-                  ] )
-          | Change m_text, Change t_text ->
-              let diff = apply_word_diff m_text t_text in
-              let mine_ui =
-                Ui.hcat
-                  (List.map
-                     (function
-                       | WDeleted words ->
-                           word_to_ui (words_to_string words) Notty.A.(fg red)
-                       | WEqual words ->
-                           word_to_ui (words_to_string words) Notty.A.empty
-                       | WAdded _ -> Ui.empty)
-                     diff)
-              in
-              let their_ui =
-                Ui.hcat
-                  (List.map
-                     (function
-                       | WAdded words ->
-                           word_to_ui (words_to_string words) Notty.A.(fg green)
-                       | WEqual words ->
-                           word_to_ui (words_to_string words) Notty.A.empty
-                       | WDeleted _ -> Ui.empty)
-                     diff)
-              in
-              ( mine_num + 1,
-                their_num + 1,
-                Ui.vcat
-                  [
-                    Ui.hcat
-                      [
-                        W.string
-                          ~attr:Notty.A.(fg red)
-                          (Printf.sprintf "%2d    - " (mine_num + 1));
-                        mine_ui;
-                      ];
-                    Ui.hcat
-                      [
-                        W.string
-                          ~attr:Notty.A.(fg green)
-                          (Printf.sprintf "   %2d + " (their_num + 1));
-                        their_ui;
-                      ];
-                  ] )
-          | Change m_text, Empty ->
-              let diff = apply_word_diff m_text "" in
-              let mine_ui =
-                Ui.hcat
-                  (List.map
-                     (function
-                       | WDeleted words ->
-                           word_to_ui (words_to_string words) Notty.A.(fg red)
-                       | _ -> Ui.empty)
-                     diff)
-              in
-              ( mine_num + 1,
-                their_num,
-                Ui.hcat
-                  [
-                    W.string
-                      ~attr:Notty.A.(fg red)
-                      (Printf.sprintf "%2d    - " (mine_num + 1));
-                    mine_ui;
-                  ] )
-          | Empty, Change t_text ->
-              let diff = apply_word_diff "" t_text in
-              let their_ui =
-                Ui.hcat
-                  (List.map
-                     (function
-                       | WAdded words ->
-                           word_to_ui (words_to_string words) Notty.A.(fg green)
-                       | _ -> Ui.empty)
-                     diff)
-              in
-              ( mine_num,
-                their_num + 1,
-                Ui.hcat
-                  [
-                    W.string
-                      ~attr:Notty.A.(fg green)
-                      (Printf.sprintf "   %2d + " (their_num + 1));
-                    their_ui;
-                  ] )
-          | _ -> line_to_ui mine_num their_num m
-        in
-        aux new_mine new_their (ui_element :: acc) (m_rest, t_rest)
-    | _, _ -> List.rev acc
+  let create_line_diff m t =
+    match (m, t) with
+    | Common m_text, Common t_text when m_text = t_text ->
+        WordDiff.CommonDiff m_text
+    | Common m_text, Common t_text ->
+        let diff = WordDiff.Diff.apply_word_diff m_text t_text in
+        WordDiff.ModifiedDiff (diff, diff)
+    | Change m_text, Change t_text ->
+        let diff = WordDiff.Diff.apply_word_diff m_text t_text in
+        WordDiff.ModifiedDiff (diff, diff)
+    | Change m_text, Empty ->
+        WordDiff.DeletedDiff (WordDiff.Diff.apply_word_diff m_text "")
+    | Empty, Change t_text ->
+        WordDiff.AddedDiff (WordDiff.Diff.apply_word_diff "" t_text)
+    | _ -> WordDiff.CommonDiff ""
   in
-  aux hunk.Patch.mine_start hunk.Patch.their_start [] (mine, their)
+  let line_diffs = List.map2 create_line_diff mine their in
+  let rec process_diffs mine_num their_num acc = function
+    | [] -> List.rev acc
+    | diff :: rest ->
+        let new_mine, new_their, ui =
+          WordDiff.render_line_diff mine_num their_num diff
+        in
+        process_diffs new_mine new_their (ui :: acc) rest
+  in
+  process_diffs hunk.Patch.mine_start hunk.Patch.their_start [] line_diffs
 
 let ui_unified_diff (hunk : Patch.hunk) : Nottui.ui =
   let lines_ui = process_lines hunk in

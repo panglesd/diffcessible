@@ -13,8 +13,9 @@ type 'a t = {
   current_index : int; (* 0-based index *)
 }
 
-(** [zipper_of_list lst] converts a list into a zipper. If the list is empty, it returns [None].
-        Otherwise, it returns [Some zipper] with the first element of the list as the focus. *)
+(** [zipper_of_list lst] converts a list into a zipper. If the list is empty, it
+    returns [None]. Otherwise, it returns [Some zipper] with the first element
+    of the list as the focus. *)
 let zipper_of_list lst : 'a t option =
   match lst with
   | [] -> None
@@ -28,8 +29,8 @@ let zipper_of_list lst : 'a t option =
           current_index = 0;
         }
 
-(** [next z] moves the focus of the zipper [z] to the next element, if any.
-        If the focus is on the last element, the zipper remains unchanged. *)
+(** [next z] moves the focus of the zipper [z] to the next element, if any. If
+    the focus is on the last element, the zipper remains unchanged. *)
 let next z =
   match z.after with
   | [] -> z
@@ -43,7 +44,7 @@ let next z =
       }
 
 (** [prev z] moves the focus of the zipper [z] to the previous element, if any.
-        If the focus is on the first element, the zipper remains unchanged. *)
+    If the focus is on the first element, the zipper remains unchanged. *)
 let prev z =
   match z.before with
   | [] -> z
@@ -59,14 +60,18 @@ let prev z =
 (** [get_focus z] returns the current focus of the zipper [z]. *)
 let get_focus z = z.focus
 
-(** [get_before z] returns the list of elements before the focus in the zipper [z]. *)
+(** [get_before z] returns the list of elements before the focus in the zipper
+    [z]. *)
 let get_before z = z.before
 
-(** [get_after z] returns the list of elements after the focus in the zipper [z]. *)
+(** [get_after z] returns the list of elements after the focus in the zipper
+    [z]. *)
 let get_after z = z.after
 
-(** [get_total_length z] returns the total length of the list represented by the zipper [z]. *)
+(** [get_total_length z] returns the total length of the list represented by the
+    zipper [z]. *)
 let get_total_length z = z.total_length
 
-(** [get_current_index z] returns the current index of the focus in the zipper [z]. *)
+(** [get_current_index z] returns the current index of the focus in the zipper
+    [z]. *)
 let get_current_index z = z.current_index

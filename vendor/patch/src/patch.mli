@@ -1,14 +1,16 @@
-type hunk = {
+type 'a line = [`Common of 'a  | `Mine of 'a | `Their of 'a ]
+
+type 'a hunk = {
   mine_start : int ;
   mine_len : int ;
   their_start : int ;
   their_len : int ;
-  lines : [ `Common of string | `Mine of string | `Their of string ] list ;
+  lines : 'a line list ;
 }
 
-val mine : hunk -> string list
-val their : hunk -> string list
-val pp_hunk : Format.formatter -> hunk -> unit
+val mine : 'a hunk -> 'a list
+val their : 'a hunk -> 'a list
+val pp_hunk : Format.formatter -> string hunk -> unit
 
 type operation =
   | Edit of string
@@ -21,15 +23,15 @@ val pp_operation : git:bool -> Format.formatter -> operation -> unit
 
 val operation_eq : operation -> operation -> bool
 
-type t = {
+type 'a t = {
   operation : operation ;
-  hunks : hunk list ;
+  hunks : 'a hunk list ;
   mine_no_nl : bool ;
   their_no_nl : bool ;
 }
 
-val pp : git:bool -> Format.formatter -> t -> unit
+val pp : git:bool -> Format.formatter -> string t -> unit
 
-val to_diffs : string -> t list
+val to_diffs : string -> string t list
 
-val patch : string option -> t -> string option
+val patch : string option -> string t -> string option

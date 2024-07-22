@@ -17,8 +17,8 @@ let quit = Lwd.var false
 let toggle_help_visibility () =
   Lwd.set help_visible (not (Lwd.peek help_visible))
 
-let view (patches : Patch.t list) =
-  let z_patches_var : Patch.t Zipper.t Lwd.var =
+let view (patches : string Patch.t list) =
+  let z_patches_var : string Patch.t Zipper.t Lwd.var =
     match Zipper.zipper_of_list patches with
     | Some z -> Lwd.var z
     | None -> failwith "zipper_of_list: empty list"

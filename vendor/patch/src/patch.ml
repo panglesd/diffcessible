@@ -43,12 +43,14 @@ module String = struct
   let equal = String.equal
 end
 
-type hunk = {
+type 'a line = [`Common of 'a  | `Mine of 'a | `Their of 'a ]
+
+type 'a hunk = {
   mine_start : int ;
   mine_len : int ;
   their_start : int ;
   their_len : int ;
-  lines : [ `Common of string | `Mine of string | `Their of string ] list ;
+  lines : 'a line list ;
 }
 
 let unified_diff hunk =
@@ -239,9 +241,9 @@ let pp_operation ~git ppf op =
     Format.fprintf ppf "rename from %s\n" old_name;
     Format.fprintf ppf "rename to %s\n" new_name
 
-type t = {
+type 'a t = {
   operation : operation ;
-  hunks : hunk list ;
+  hunks : 'a hunk list ;
   mine_no_nl : bool ;
   their_no_nl : bool ;
 }

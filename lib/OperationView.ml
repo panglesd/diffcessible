@@ -1,7 +1,7 @@
 open Nottui
 module W = Nottui_widgets
 
-let operation_info (z_patches : Patch.t Zipper.t) : Nottui.ui =
+let operation_info (z_patches : string Patch.t Zipper.t) : Nottui.ui =
   let p = Zipper.get_focus z_patches in
   let num_hunks = List.length p.Patch.hunks in
   let hunk_text =
@@ -45,7 +45,7 @@ let ui_of_operation (operation : Patch.operation) : Nottui.ui =
       Ui.hcat
         [ W.string "Modification of "; W.string ~attr:blue_bold_attr path ]
 
-let current_operation (z_patches : Patch.t Zipper.t) : Nottui.ui =
+let current_operation (z_patches : string Patch.t Zipper.t) : Nottui.ui =
   let p = Zipper.get_focus z_patches in
   ui_of_operation p.Patch.operation
 
@@ -58,7 +58,7 @@ let additions_and_removals lines : int * int =
   in
   List.fold_left add_line (0, 0) lines
 
-let accumulate_count (hunks : Patch.hunk list) : int * int =
+let accumulate_count (hunks : string Patch.hunk list) : int * int =
   List.fold_left
     (fun (add_acc, remove_acc) hunk ->
       let add_in_hunk, remove_in_hunk =
@@ -67,7 +67,7 @@ let accumulate_count (hunks : Patch.hunk list) : int * int =
       (add_acc + add_in_hunk, remove_acc + remove_in_hunk))
     (0, 0) hunks
 
-let change_summary (z_patches : Patch.t Zipper.t) : Nottui.ui =
+let change_summary (z_patches : string Patch.t Zipper.t) : Nottui.ui =
   let p = Zipper.get_focus z_patches in
   let total_additions, total_removals = accumulate_count p.Patch.hunks in
   let format_plural n singular plural =

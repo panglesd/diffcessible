@@ -3,7 +3,7 @@ module W = Nottui_widgets
 
 (* Implementation of Single View Mode *)
 
-let ui_hunk_summary (hunk : Patch.hunk) : Nottui.ui =
+let ui_hunk_summary (hunk : string Patch.hunk) : Nottui.ui =
   let mine_info =
     if hunk.Patch.mine_len = 0 then "0,0"
     else Printf.sprintf "%d,%d" (hunk.Patch.mine_start + 1) hunk.Patch.mine_len
@@ -61,7 +61,7 @@ let rec process_lines (mine_num : int) (their_num : int) (acc : Nottui.ui list)
       in
       process_lines new_mine new_their (ui_element :: acc) rest
 
-let ui_unified_diff (hunk : Patch.hunk) : Nottui.ui =
+let ui_unified_diff (hunk : string Patch.hunk) : Nottui.ui =
   let lines_ui =
     process_lines hunk.Patch.mine_start hunk.Patch.their_start []
       hunk.Patch.lines
@@ -70,7 +70,7 @@ let ui_unified_diff (hunk : Patch.hunk) : Nottui.ui =
 
   Ui.vcat [ ui_hunk_summary hunk; lines_ui_vcat ]
 
-let current_hunks (z_patches : Patch.t Zipper.t) : Nottui.ui =
+let current_hunks (z_patches : string Patch.t Zipper.t) : Nottui.ui =
   let p = Zipper.get_focus z_patches in
   let hunks = List.map ui_unified_diff p.Patch.hunks in
   Ui.vcat hunks
@@ -151,7 +151,7 @@ let create_summary (start_line_num : int) (hunk_length : int)
       (Printf.sprintf "@@ %s%d,%d @@" sign start_line_num hunk_length)
   else W.string ~attr (Printf.sprintf "@@ %s0,0 @@" sign)
 
-let ui_of_hunk_side_by_side (hunk : Patch.hunk) : Nottui.ui =
+let ui_of_hunk_side_by_side (hunk : string Patch.hunk) : Nottui.ui =
   let attr_mine = Notty.A.(fg red ++ st bold) in
   let attr_their = Notty.A.(fg green ++ st bold) in
 
@@ -177,7 +177,8 @@ let ui_of_hunk_side_by_side (hunk : Patch.hunk) : Nottui.ui =
       Ui.resize ~w:0 ~sw:2 (Ui.vcat (summary_their :: content_their));
     ]
 
-let current_hunks_side_by_side (z_patches : Patch.t Zipper.t) : Nottui.ui =
+let current_hunks_side_by_side (z_patches : string Patch.t Zipper.t) : Nottui.ui
+    =
   let p = Zipper.get_focus z_patches in
   let hunks_ui = List.map ui_of_hunk_side_by_side p.Patch.hunks in
   Ui.vcat hunks_ui

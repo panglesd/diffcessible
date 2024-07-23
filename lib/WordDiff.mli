@@ -15,7 +15,7 @@ type hunk = {
   their_start : int;
   their_len : int;
   lines : line_change list;
-} 
+}
 
 val compute : Patch.hunk -> hunk
 val render_hunk : hunk -> Nottui.ui

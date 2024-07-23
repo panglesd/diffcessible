@@ -37,7 +37,7 @@ let split_and_align_hunk hunks : line list * line list =
   in
   process_hunk [] [] hunks
 
-(* UI Functions *)
+(* Normal Mode *)
 
 let ui_hunk_summary (hunk : Patch.hunk) : Nottui.ui =
   let mine_info =

@@ -1,52 +1,3 @@
---- a/document.txt
-+++ b/document.txt
-@@ -1,5 +1,5 @@
--The quick brown fox jumps over the lazy dog.
-+The fast brown fox leaps over the sleeping dog.
- She sells seashells by the seashore.
--The rain in Spain stays mainly in the plain.
-+The rain in France falls mainly on the plain.
- To be or not to be, that is the question.
--All that glitters is not gold.
-+Not all that glitters is gold.
-@@ -7,3 +7,3 @@
- A stitch in time saves nine.
--An apple a day keeps the doctor away.
-+An apple each day keeps the doctor away.
- Actions speak louder than words.
-@@ -11,2 +11,2 @@
--The early bird catches the worm.
-+The early riser catches the worm.
-@@ -14,2 +14,2 @@
--Practice makes perfect.
-+Practice leads to perfection.
-@@ -17,3 +17,3 @@
- When in Rome, do as the Romans do.
--Don't put all your eggs in one basket.
-+Never put all your eggs in one basket.
- A penny saved is a penny earned.
-@@ -21,2 +21,2 @@
--Every cloud has a silver lining.
-+Every cloud possesses a silver lining.
-@@ -24,2 +24,2 @@
--Two wrongs don't make a right.
-+Two wrongs never make a right.
-@@ -27,1 +27,2 @@
- The pen is mightier than the sword.
-+Words can be sharper than any blade.
-
---- a/sample.txt
-+++ b/sample.txt
-@@ -1,2 +1,2 @@
--foo bar baz
-+foo bat bak
-@@ -4,2 +4,1 @@
--The quick brown fox jumps over the lazy dog.
-+The quick black cat jumps over the lazy dog.
-@@ -7,2 +6,2 @@
--She sells sea shells by the sea shore.
-+He sells sea shells by the sea floor.
-
 diff --git a/bin/dune b/bin/dune
 index fca70de..fd7f225 100644
 --- a/bin/dune
@@ -209,3 +160,53 @@ index e69de29..eee417f 100644
 +++ b/dir2/file.txt
 @@ -0,0 +1 @@
 +new text
+--- a/document.txt
++++ b/document.txt
+@@ -1,5 +1,5 @@
+-The quick brown fox jumps over the lazy dog.
++The fast brown fox leaps over the sleeping dog.
+ She sells seashells by the seashore.
+-The rain in Spain stays mainly in the plain.
++The rain in France falls mainly on the plain.
+ To be or not to be, that is the question.
+-All that glitters is not gold.
++Not all that glitters is gold.
+@@ -7,3 +7,3 @@
+ A stitch in time saves nine.
+-An apple a day keeps the doctor away.
++An apple each day keeps the doctor away.
+ Actions speak louder than words.
+@@ -11,2 +11,2 @@
+-The early bird catches the worm.
++The early riser catches the worm.
+@@ -14,2 +14,2 @@
+-Practice makes perfect.
++Practice leads to perfection.
+@@ -17,3 +17,3 @@
+ When in Rome, do as the Romans do.
+-Don't put all your eggs in one basket.
++Never put all your eggs in one basket.
+ A penny saved is a penny earned.
+@@ -21,2 +21,2 @@
+-Every cloud has a silver lining.
++Every cloud possesses a silver lining.
+@@ -24,2 +24,2 @@
+-Two wrongs don't make a right.
++Two wrongs never make a right.
+@@ -27,1 +27,2 @@
+ The pen is mightier than the sword.
++Words can be sharper than any blade.
+
+--- a/sample.txt
++++ b/sample.txt
+@@ -1,2 +1,2 @@
+-foo bar baz
++foo bat bak
+@@ -4,2 +4,1 @@
+-The quick brown fox jumps over the lazy dog.
++The quick black cat jumps over the lazy dog.
+@@ -7,2 +6,2 @@
+-She sells sea shells by the sea shore.
++He sells sea shells by the sea floor.
+
+

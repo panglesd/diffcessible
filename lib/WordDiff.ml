@@ -22,73 +22,48 @@ type hunk = {
 
 let string_to_words s = Array.of_list (String.split_on_char ' ' s)
 let words_to_string words = String.concat " " (Array.to_list words)
+let longest xs ys = if List.length xs > List.length ys then xs else ys
 
-module Diff = struct
-  include Simple_diff.Make (String)
+let lcs xs' ys' =
+  let xs = Array.of_list xs' and ys = Array.of_list ys' in
+  let n = Array.length xs and m = Array.length ys in
+  let a = Array.make_matrix (n + 1) (m + 1) [] in
+  for i = n - 1 downto 0 do
+    for j = m - 1 downto 0 do
+      a.(i).(j) <-
+        (if xs.(i) = ys.(j) then xs.(i) :: a.(i + 1).(j + 1)
+         else longest a.(i).(j + 1) a.(i + 1).(j))
+    done
+  done;
+  a.(0).(0)
 
-  let log_to_stderr content = Printf.eprintf "%s\n%!" content
+let diff_words s1 s2 =
+  let words1 = Array.to_list (string_to_words s1) in
+  let words2 = Array.to_list (string_to_words s2) in
+  let common = lcs words1 words2 in
+  let rec construct_diff w1 w2 lcs acc =
+    match (w1, w2, lcs) with
+    | [], [], [] -> List.rev acc
+    | x :: xs, y :: ys, z :: zs when x = z && y = z ->
+        construct_diff xs ys zs (WEqual [| z |] :: acc)
+    | x :: xs, ys, lcs when not (List.mem x lcs) ->
+        construct_diff xs ys lcs (WDeleted [| x |] :: acc)
+    | xs, y :: ys, lcs when not (List.mem y lcs) ->
+        construct_diff xs ys lcs (WAdded [| y |] :: acc)
+    | [], [], zs -> construct_diff [] [] zs (WEqual (Array.of_list zs) :: acc)
+    | xs, [], [] -> construct_diff xs [] [] (WDeleted (Array.of_list xs) :: acc)
+    | [], ys, [] -> construct_diff [] ys [] (WAdded (Array.of_list ys) :: acc)
+    | _, _, _ -> acc
+  in
+  construct_diff words1 words2 common []
 
-  let diff_words s1 s2 =
-    let words1 = string_to_words s1 in
-    let words2 = string_to_words s2 in
-    let diff = get_diff words1 words2 in
-    let log_content =
-      Printf.sprintf "Diff for:\n%s\n%s\nResult:\n%s\n\n" s1 s2
-        (String.concat "\n"
-           (List.map
-              (function
-                | Deleted words -> "Deleted: " ^ words_to_string words
-                | Added words -> "Added: " ^ words_to_string words
-                | Equal words -> "Equal: " ^ words_to_string words)
-              diff))
-    in
-    log_to_stderr log_content;
-    diff
-
-  let apply_word_diff s1 s2 =
-    let diff = diff_words s1 s2 in
-    let rec process_diff acc = function
-      | [] -> List.rev acc
-      | Deleted words :: Added words' :: rest ->
-          process_diff (WAdded words' :: WDeleted words :: acc) rest
-      | Deleted words :: rest -> process_diff (WDeleted words :: acc) rest
-      | Added words :: rest -> process_diff (WAdded words :: acc) rest
-      | Equal words :: rest -> process_diff (WEqual words :: acc) rest
-    in
-    let result = process_diff [] diff in
-    log_to_stderr
-      (Printf.sprintf "apply_word_diff result:\n%s\n\n"
-         (String.concat "\n"
-            (List.map
-               (function
-                 | WDeleted words -> "WDeleted: " ^ words_to_string words
-                 | WAdded words -> "WAdded: " ^ words_to_string words
-                 | WEqual words -> "WEqual: " ^ words_to_string words)
-               result)));
-    result
-end
-
-(* module Diff = struct *)
-(*   include Simple_diff.Make (String) *)
-(*   let diff_words s1 s2 = *)
-(*     let words1 = string_to_words s1 in *)
-(*     let words2 = string_to_words s2 in *)
-(*     get_diff words1 words2 *)
-(*   let apply_word_diff s1 s2 = *)
-(*     let diff = diff_words s1 s2 in *)
-(*     List.map *)
-(*       (function *)
-(*         | Deleted words -> WDeleted words *)
-(*         | Added words -> WAdded words *)
-(*         | Equal words -> WEqual words) *)
-(*       diff *)
-(* end *)
+let apply_word_diff s1 s2 = diff_words s1 s2
 
 let compute (patch_hunk : Patch.hunk) : hunk =
   let rec process_changes acc = function
     | [] -> List.rev acc
     | `Mine m :: `Their t :: rest ->
-        let diff = Diff.apply_word_diff m t in
+        let diff = apply_word_diff m t in
         process_changes (ModifiedDiff diff :: acc) rest
     | `Their t :: rest -> process_changes (AddedWord t :: acc) rest
     | `Mine m :: rest -> process_changes (DeletedWord m :: acc) rest

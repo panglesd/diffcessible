@@ -67,39 +67,11 @@ let ui_hunk_summary (hunk : Patch.hunk) : Nottui.ui =
       at_symbols;
     ]
 
-let process_lines hunk =
-  let mine, their = split_and_align_hunk hunk.Patch.lines in
-  let create_line_diff m t =
-    match (m, t) with
-    | Common m_text, Common t_text when m_text = t_text ->
-        WordDiff.CommonDiff m_text
-    | Common m_text, Common t_text ->
-        let diff = WordDiff.Diff.apply_word_diff m_text t_text in
-        WordDiff.ModifiedDiff (diff, diff)
-    | Change m_text, Change t_text ->
-        let diff = WordDiff.Diff.apply_word_diff m_text t_text in
-        WordDiff.ModifiedDiff (diff, diff)
-    | Change m_text, Empty ->
-        WordDiff.DeletedDiff (WordDiff.Diff.apply_word_diff m_text "")
-    | Empty, Change t_text ->
-        WordDiff.AddedDiff (WordDiff.Diff.apply_word_diff "" t_text)
-    | _ -> WordDiff.CommonDiff ""
-  in
-  let line_diffs = List.map2 create_line_diff mine their in
-  let rec process_diffs mine_num their_num acc = function
-    | [] -> List.rev acc
-    | diff :: rest ->
-        let new_mine, new_their, ui =
-          WordDiff.render_line_diff mine_num their_num diff
-        in
-        process_diffs new_mine new_their (ui :: acc) rest
-  in
-  process_diffs hunk.Patch.mine_start hunk.Patch.their_start [] line_diffs
-
 let ui_unified_diff (hunk : Patch.hunk) : Nottui.ui =
-  let lines_ui = process_lines hunk in
-  let lines_ui_vcat = Ui.vcat lines_ui in
-  Ui.vcat [ ui_hunk_summary hunk; lines_ui_vcat ]
+  let word_diff_hunk = WordDiff.compute hunk in
+  let hunk_summary = ui_hunk_summary hunk in
+  let hunk_content = WordDiff.render_hunk word_diff_hunk in
+  Ui.vcat [ hunk_summary; hunk_content ]
 
 let current_hunks (z_patches : Patch.t Zipper.t) : Nottui.ui =
   let p = Zipper.get_focus z_patches in

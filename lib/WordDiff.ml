@@ -6,11 +6,19 @@ type word_diff =
   | WAdded of string array
   | WEqual of string array
 
-type line_diff =
-  | CommonDiff of string
-  | DeletedDiff of word_diff list
-  | AddedDiff of word_diff list
-  | ModifiedDiff of word_diff list * word_diff list
+type line_change =
+  | Common of string
+  | Added of string
+  | Deleted of string
+  | Modified of word_diff list
+
+type hunk = {
+  mine_start : int;
+  mine_len : int;
+  their_start : int;
+  their_len : int;
+  lines : line_change list;
+}
 
 let string_to_words s = Array.of_list (String.split_on_char ' ' s)
 let words_to_string words = String.concat " " (Array.to_list words)
@@ -32,6 +40,23 @@ module Diff = struct
         | Equal words -> WEqual words)
       diff
 end
+
+let compute (patch_hunk : Patch.hunk) : hunk =
+  let rec process_changes acc = function
+    | [] -> List.rev acc
+    | `Mine m :: `Their t :: rest ->
+        process_changes (Modified (Diff.apply_word_diff m t) :: acc) rest
+    | `Their t :: rest -> process_changes (Added t :: acc) rest
+    | `Mine m :: rest -> process_changes (Deleted m :: acc) rest
+    | `Common c :: rest -> process_changes (Common c :: acc) rest
+  in
+  {
+    mine_start = patch_hunk.Patch.mine_start;
+    mine_len = patch_hunk.Patch.mine_len;
+    their_start = patch_hunk.Patch.their_start;
+    their_len = patch_hunk.Patch.their_len;
+    lines = process_changes [] patch_hunk.Patch.lines;
+  }
 
 let word_to_ui word attr = W.string ~attr (word ^ " ")
 
@@ -60,28 +85,54 @@ let render_diff_line mine_num their_num attr diff_type diff =
     ]
 
 let render_line_diff mine_num their_num = function
-  | CommonDiff text ->
+  | Common text ->
       ( mine_num + 1,
         their_num + 1,
         render_diff_line mine_num their_num Notty.A.empty `Equal
           [ WEqual (string_to_words text) ] )
-  | DeletedDiff diff ->
+  | Deleted text ->
       ( mine_num + 1,
         their_num,
-        render_diff_line mine_num their_num Notty.A.(fg red) `Deleted diff )
-  | AddedDiff diff ->
+        render_diff_line mine_num their_num
+          Notty.A.(fg red)
+          `Deleted
+          [ WDeleted (string_to_words text) ] )
+  | Added text ->
       ( mine_num,
         their_num + 1,
-        render_diff_line mine_num their_num Notty.A.(fg green) `Added diff )
-  | ModifiedDiff (mine_diff, their_diff) ->
+        render_diff_line mine_num their_num
+          Notty.A.(fg green)
+          `Added
+          [ WAdded (string_to_words text) ] )
+  | Modified diff ->
       ( mine_num + 1,
         their_num + 1,
         Ui.vcat
           [
             render_diff_line mine_num their_num
               Notty.A.(fg red)
-              `Deleted mine_diff;
+              `Deleted
+              (List.filter
+                 (function WDeleted _ | WEqual _ -> true | _ -> false)
+                 diff);
             render_diff_line mine_num their_num
               Notty.A.(fg green)
-              `Added their_diff;
+              `Added
+              (List.filter
+                 (function WAdded _ | WEqual _ -> true | _ -> false)
+                 diff);
           ] )
+
+let render_hunk (hunk : hunk) : Nottui.ui =
+  let lines_ui =
+    let rec process_lines mine_num their_num acc = function
+      | [] -> List.rev acc
+      | line :: rest ->
+          let new_mine, new_their, ui =
+            render_line_diff mine_num their_num line
+          in
+          process_lines new_mine new_their (ui :: acc) rest
+    in
+    process_lines hunk.mine_start hunk.their_start [] hunk.lines
+  in
+  Ui.vcat lines_ui

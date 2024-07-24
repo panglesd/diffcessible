@@ -58,8 +58,12 @@ let diff_words s1 s2 =
     | [], y :: ys, lcs -> construct_diff [] ys lcs (WAdded [| y |] :: acc)
     | x :: xs, y :: ys, [] ->
         construct_diff xs ys [] (WDeleted [| x |] :: WAdded [| y |] :: acc)
-    | [], [], z :: zs -> construct_diff [] [] zs (WEqual [| z |] :: acc)
+    | [], [], _ ->
+        failwith
+          "This should not happen, lcs should be the longest common \
+           subsequence of the two lists."
   in
+
   construct_diff words1 words2 common []
 
 let apply_word_diff s1 s2 = diff_words s1 s2

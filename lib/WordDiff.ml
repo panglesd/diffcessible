@@ -44,16 +44,21 @@ let diff_words s1 s2 =
   let rec construct_diff w1 w2 lcs acc =
     match (w1, w2, lcs) with
     | [], [], [] -> List.rev acc
-    | x :: xs, y :: ys, z :: zs when x = z && y = z ->
-        construct_diff xs ys zs (WEqual [| z |] :: acc)
-    | x :: xs, ys, lcs when not (List.mem x lcs) ->
-        construct_diff xs ys lcs (WDeleted [| x |] :: acc)
-    | xs, y :: ys, lcs when not (List.mem y lcs) ->
-        construct_diff xs ys lcs (WAdded [| y |] :: acc)
-    | [], [], zs -> construct_diff [] [] zs (WEqual (Array.of_list zs) :: acc)
-    | xs, [], [] -> construct_diff xs [] [] (WDeleted (Array.of_list xs) :: acc)
-    | [], ys, [] -> construct_diff [] ys [] (WAdded (Array.of_list ys) :: acc)
-    | _, _, _ -> acc
+    | x :: xs, y :: ys, z :: zs -> (
+        match (x = z, y = z) with
+        | true, true -> construct_diff xs ys zs (WEqual [| x |] :: acc)
+        | false, true ->
+            construct_diff xs (y :: ys) (z :: zs) (WDeleted [| x |] :: acc)
+        | true, false ->
+            construct_diff (x :: xs) ys (z :: zs) (WAdded [| y |] :: acc)
+        | false, false ->
+            construct_diff xs ys (z :: zs)
+              (WDeleted [| x |] :: WAdded [| y |] :: acc))
+    | x :: xs, [], lcs -> construct_diff xs [] lcs (WDeleted [| x |] :: acc)
+    | [], y :: ys, lcs -> construct_diff [] ys lcs (WAdded [| y |] :: acc)
+    | x :: xs, y :: ys, [] ->
+        construct_diff xs ys [] (WDeleted [| x |] :: WAdded [| y |] :: acc)
+    | [], [], z :: zs -> construct_diff [] [] zs (WEqual [| z |] :: acc)
   in
   construct_diff words1 words2 common []
 

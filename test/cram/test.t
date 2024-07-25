@@ -383,13 +383,3 @@ This is a cram test for the new executable.
 
 
 
-  $ dummy_terminal word-diff-examples.diff n 
-  diffcessible: internal error, uncaught exception:
-                Sys_error("word-diff-examples.diff: No such file or directory")
-                
-  [125]
-  $ dummy_terminal word-diff-examples.diff n n
-  diffcessible: internal error, uncaught exception:
-                Sys_error("word-diff-examples.diff: No such file or directory")
-                
-  [125]

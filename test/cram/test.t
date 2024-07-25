@@ -2,7 +2,7 @@ This is a cram test for the new executable.
 
 # Run the executable
   $ dummy_terminal example.diff h q
-  Operation 1 of 16, 1 hunk
+  Operation 1 of 14, 1 hunk
   1 addition, 1 removal
   Modification of bin/dune
   @@ -1,4 +1,4 @@
@@ -23,7 +23,7 @@ This is a cram test for the new executable.
   
   Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation. Press 't' to toggle view mode.
   $ dummy_terminal example.diff n
-  Operation 2 of 16, 1 hunk
+  Operation 2 of 14, 1 hunk
   3 additions, 1 removal
   Modification of bin/main.ml
   @@ -1,7 +1,9 @@
@@ -44,7 +44,7 @@ This is a cram test for the new executable.
   
   Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation. Press 't' to toggle view mode.
   $ dummy_terminal example.diff n n
-  Operation 3 of 16, 1 hunk
+  Operation 3 of 14, 1 hunk
   1 addition, 1 removal
   Modification of lib/dune
   @@ -1,3 +1,3 @@
@@ -179,7 +179,7 @@ This is a cram test for the new executable.
   Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation. Press 't' to toggle view mode.
 
   $ dummy_terminal example.diff n n t
-  Operation 3 of 16, 1 hunk
+  Operation 3 of 14, 1 hunk
   1 addition, 1 removal
   Modification of lib/dune
   @@ -1,3 @@                                                                  @@ +1,3 @@
@@ -201,7 +201,7 @@ This is a cram test for the new executable.
   Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation. Press 't' to toggle view mode.
 
   $ dummy_terminal example.diff n n n t
-  Operation 4 of 16, 1 hunk
+  Operation 4 of 14, 1 hunk
   6 additions, 20 removals
   Modification of lib/interactive_viewer.ml
   @@ -1,39 @@                                                                 @@ +1,25 @@
@@ -224,7 +224,7 @@ This is a cram test for the new executable.
 
 
   $ dummy_terminal example.diff n n n n t
-  Operation 5 of 16, 1 hunk
+  Operation 5 of 14, 1 hunk
   1 addition, 3 removals
   Modification of lib/interactive_viewer.mli
   @@ -1,5 @@                                                                  @@ +1,3 @@
@@ -247,7 +247,7 @@ This is a cram test for the new executable.
 
 
   $ dummy_terminal example.diff n n n n n t
-  Operation 6 of 16, 1 hunk
+  Operation 6 of 14, 1 hunk
   1 addition, 1 removal
   Rename with modifications dir1/file.txt to dir2/file.txt
   @@ -1,1 @@                                                                  @@ +1,1 @@
@@ -269,7 +269,7 @@ This is a cram test for the new executable.
   Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation. Press 't' to toggle view mode.
 
   $ dummy_terminal example.diff n n n n n n n t
-  Operation 8 of 16, 1 hunk
+  Operation 8 of 14, 1 hunk
   2 additions, 1 removal
   Rename with modifications dir1/file.txt to dir2/file.txt
   @@ -1,1 @@                                                                  @@ +1,2 @@
@@ -291,7 +291,7 @@ This is a cram test for the new executable.
   Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation. Press 't' to toggle view mode.
 
   $ dummy_terminal example.diff n n n n n n n n n t
-  Operation 10 of 16, 1 hunk
+  Operation 10 of 14, 1 hunk
   0 additions, 1 removal
   Deletion of dir1/file.txt
   @@ -1,1 @@                                                                  @@ +0,0 @@
@@ -313,7 +313,7 @@ This is a cram test for the new executable.
   Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation. Press 't' to toggle view mode.
 
   $ dummy_terminal example.diff n n n n n n n n n n n n t
-  Operation 13 of 16, 1 hunk
+  Operation 13 of 14, 1 hunk
   2 additions, 0 removals
   Creation of dir2/sample.txt
   @@ -0,0 @@                                                                  @@ +1,2 @@
@@ -335,15 +335,15 @@ This is a cram test for the new executable.
   Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation. Press 't' to toggle view mode.
 
   $ dummy_terminal example.diff n n n n n n n n n n n n n n n t
-  Operation 16 of 16, 3 hunks
-  3 additions, 3 removals
-  Rename with modifications a/sample.txt to b/sample.txt
-  @@ -1,2 @@                                                                  @@ +1,2 @@
-    1 - foo bar baz                                                             1 + foo bat bak
-  @@ -4,2 @@                                                                  @@ +4,1 @@
-    1 - The quick brown fox jumps over the lazy dog.                            1 + The quick black cat jumps over the lazy dog.
-  @@ -7,2 @@                                                                  @@ +6,2 @@
-    1 - She sells sea shells by the sea shore.                                  1 + He sells sea shells by the sea floor.
+  Operation 14 of 14, 1 hunk
+  1 addition, 0 removals
+  Rename with modifications dir1/file.txt to dir2/file.txt
+  @@ -0,0 @@                                                                  @@ +1,1 @@
+                                                                                1 + new text
+  
+  
+  
+  
   
   
   
@@ -358,15 +358,15 @@ This is a cram test for the new executable.
 
 
   $ dummy_terminal example.diff n n n n n n n n n n n n n n n n t
-  Operation 16 of 16, 3 hunks
-  3 additions, 3 removals
-  Rename with modifications a/sample.txt to b/sample.txt
-  @@ -1,2 @@                                                                  @@ +1,2 @@
-    1 - foo bar baz                                                             1 + foo bat bak
-  @@ -4,2 @@                                                                  @@ +4,1 @@
-    1 - The quick brown fox jumps over the lazy dog.                            1 + The quick black cat jumps over the lazy dog.
-  @@ -7,2 @@                                                                  @@ +6,2 @@
-    1 - She sells sea shells by the sea shore.                                  1 + He sells sea shells by the sea floor.
+  Operation 14 of 14, 1 hunk
+  1 addition, 0 removals
+  Rename with modifications dir1/file.txt to dir2/file.txt
+  @@ -0,0 @@                                                                  @@ +1,1 @@
+                                                                                1 + new text
+  
+  
+  
+  
   
   
   
@@ -383,5 +383,13 @@ This is a cram test for the new executable.
 
 
 
-
-
+  $ dummy_terminal word-diff-examples.diff n 
+  diffcessible: internal error, uncaught exception:
+                Sys_error("word-diff-examples.diff: No such file or directory")
+                
+  [125]
+  $ dummy_terminal word-diff-examples.diff n n
+  diffcessible: internal error, uncaught exception:
+                Sys_error("word-diff-examples.diff: No such file or directory")
+                
+  [125]

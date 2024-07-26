@@ -67,44 +67,11 @@ let ui_hunk_summary (hunk : string Patch.hunk) : Nottui.ui =
       at_symbols;
     ]
 
-let rec process_lines (mine_num : int) (their_num : int) (acc : Nottui.ui list)
-    = function
-  | [] -> List.rev acc
-  | line :: rest ->
-      let new_mine, new_their, ui_element =
-        match line with
-        | `Common line ->
-            let ui =
-              W.string ~attr:Notty.A.empty
-                (Printf.sprintf "%2d %2d   %s" (mine_num + 1) (their_num + 1)
-                   line)
-            in
-            (mine_num + 1, their_num + 1, ui)
-        | `Their line ->
-            let ui =
-              W.string
-                ~attr:Notty.A.(fg green)
-                (Printf.sprintf "   %2d + %s" (their_num + 1) line)
-            in
-            (mine_num, their_num + 1, ui)
-        | `Mine line ->
-            let ui =
-              W.string
-                ~attr:Notty.A.(fg red)
-                (Printf.sprintf "%2d    - %s" (mine_num + 1) line)
-            in
-            (mine_num + 1, their_num, ui)
-      in
-      process_lines new_mine new_their (ui_element :: acc) rest
-
 let ui_unified_diff (hunk : string Patch.hunk) : Nottui.ui =
-  let lines_ui =
-    process_lines hunk.Patch.mine_start hunk.Patch.their_start []
-      hunk.Patch.lines
-  in
-  let lines_ui_vcat = Ui.vcat lines_ui in
-
-  Ui.vcat [ ui_hunk_summary hunk; lines_ui_vcat ]
+  let word_diff_hunk = WordDiff.compute hunk in
+  let hunk_summary = ui_hunk_summary hunk in
+  let hunk_content = WordDiff.render_hunk word_diff_hunk in
+  Ui.vcat [ hunk_summary; hunk_content ]
 
 let current_hunks (z_patches : string Patch.t Zipper.t) : Nottui.ui =
   let p = Zipper.get_focus z_patches in
@@ -112,14 +79,6 @@ let current_hunks (z_patches : string Patch.t Zipper.t) : Nottui.ui =
   Ui.vcat hunks
 
 (** Side by side diff view implementation **)
-
-let create_summary (start_line_num : int) (hunk_length : int)
-    (attr : Notty.attr) (change_type : [ `Add | `Remove ]) : Nottui.ui =
-  let sign = match change_type with `Add -> "+" | `Remove -> "-" in
-  if hunk_length > 0 then
-    W.string ~attr
-      (Printf.sprintf "@@ %s%d,%d @@" sign start_line_num hunk_length)
-  else W.string ~attr (Printf.sprintf "@@ %s0,0 @@" sign)
 
 let lines_with_numbers (lines : line list) (attr_change : Notty.attr)
     (prefix : string) : Nottui.ui list =

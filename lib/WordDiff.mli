@@ -20,5 +20,7 @@ type hunk = {
   lines : line_change list;
 }
 
-val compute : string Block.t -> line_content Block.t
+val compute : string Patch.hunk -> hunk
+
+(* val compute : string Block.t -> line_content Block.t *)
 val render_hunk : hunk -> Nottui.ui

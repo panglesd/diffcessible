@@ -69,7 +69,7 @@ let diff_words s1 s2 =
 
 let apply_word_diff s1 s2 = diff_words s1 s2
 
-let compute (patch_hunk : Patch.hunk) : hunk =
+let compute (patch_hunk : string Patch.hunk) : hunk =
   let rec process_changes acc = function
     | [] -> List.rev acc
     | `Mine m :: `Their t :: rest ->

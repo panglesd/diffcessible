@@ -11,7 +11,7 @@ let example_hunk : string Patch.hunk =
 (* +C *)
 (* -D *)
 
-type origin = Mine | Their | Equal
+type origin = Mine | Their
 
 type 'a t =
   | Common of 'a
@@ -23,77 +23,59 @@ let example_blocks =
     Changed { mine = [ "C" ]; their = [ "D" ]; order = Mine };
   ]
 
-let find_first_change (hunk : string Patch.hunk) : origin =
-  let rec aux lines =
-    match lines with
-    | `Common _ :: rest -> aux rest
-    | `Mine _ :: _ -> Mine
-    | `Their _ :: _ -> Their
-    | [] -> Equal
+(* let find_first_change (hunk : string Patch.hunk) : origin = *)
+(*   let rec aux lines = *)
+(*     match lines with *)
+(*     | `Common _ :: rest -> aux rest *)
+(*     | `Mine _ :: _ -> Mine *)
+(*     | `Their _ :: _ -> Their *)
+(*     | [] -> Equal *)
+(*   in *)
+(*   aux hunk.lines *)
+
+let of_hunk (hunk : 'a Patch.hunk) : 'a t list =
+  let make_block ~adds ~dels =
+    if adds = [] && dels = [] then []
+    else
+      let order = if adds <> [] then Mine else Their in
+      [ Changed { mine = adds; their = dels; order } ]
   in
-  aux hunk.lines
+  let make_common c = [ Common c ] in
 
-type collection_phase = First | Second
-
-let of_hunk (hunk : string Patch.hunk) : string t list =
-  let first_change = find_first_change hunk in
-  let rec aux blocks mine their lines current_origin phase =
-    match lines with
-    | [] ->
-        if mine <> [] || their <> [] then
-          Changed
-            {
-              mine = List.rev mine;
-              their = List.rev their;
-              order = current_origin;
-            }
-          :: blocks
-        else blocks
+  let rec start acc = function
+    | [] -> List.rev acc
+    | `Mine x :: rest -> collect_mine acc [ x ] rest
+    | `Their x :: rest -> collect_their acc [ x ] rest
+    | `Common x :: rest -> start (make_common x @ acc) rest
+  and collect_mine acc adds = function
+    | [] -> List.rev (make_block ~adds ~dels:[] @ acc)
+    | `Mine x :: rest -> collect_mine acc (x :: adds) rest
+    | `Their x :: rest ->
+        collect_their_after_mine acc (List.rev adds) [ x ] rest
     | `Common x :: rest ->
-        let new_blocks =
-          if mine <> [] || their <> [] then
-            Changed
-              {
-                mine = List.rev mine;
-                their = List.rev their;
-                order = current_origin;
-              }
-            :: blocks
-          else blocks
-        in
-        aux (Common x :: new_blocks) [] [] rest first_change First
-    | `Mine x :: rest -> (
-        match (phase, current_origin) with
-        | First, _ -> aux blocks (x :: mine) their rest Mine Second
-        | Second, Mine -> aux blocks (x :: mine) their rest Mine Second
-        | Second, Their | Second, Equal ->
-            let new_blocks =
-              Changed
-                {
-                  mine = List.rev mine;
-                  their = List.rev their;
-                  order = current_origin;
-                }
-              :: blocks
-            in
-            aux new_blocks [ x ] [] rest Mine First)
-    | `Their x :: rest -> (
-        match (phase, current_origin) with
-        | First, _ -> aux blocks mine (x :: their) rest Their Second
-        | Second, Their -> aux blocks mine (x :: their) rest Their Second
-        | Second, Mine | Second, Equal ->
-            let new_blocks =
-              Changed
-                {
-                  mine = List.rev mine;
-                  their = List.rev their;
-                  order = current_origin;
-                }
-              :: blocks
-            in
-            aux new_blocks [] [ x ] rest Their First)
+        start (make_block ~adds ~dels:[] @ make_common x @ acc) rest
+  and collect_their acc dels = function
+    | [] -> List.rev (make_block ~adds:[] ~dels @ acc)
+    | `Mine x :: rest -> collect_mine_after_their acc [ x ] (List.rev dels) rest
+    | `Their x :: rest -> collect_their acc (x :: dels) rest
+    | `Common x :: rest ->
+        start (make_block ~adds:[] ~dels @ make_common x @ acc) rest
+  and collect_their_after_mine acc adds dels = function
+    | [] -> List.rev (make_block ~adds ~dels @ acc)
+    | `Mine x :: rest -> collect_mine (make_block ~adds ~dels @ acc) [ x ] rest
+    | `Their x :: rest -> collect_their_after_mine acc adds (x :: dels) rest
+    | `Common x :: rest ->
+        start (make_block ~adds ~dels @ make_common x @ acc) rest
+  and collect_mine_after_their acc adds dels = function
+    | [] -> List.rev (make_block ~adds ~dels @ acc)
+    | `Mine x :: rest -> collect_mine_after_their acc (x :: adds) dels rest
+    | `Their x :: rest ->
+        collect_their (make_block ~adds ~dels @ acc) [ x ] rest
+    | `Common x :: rest ->
+        start (make_block ~adds ~dels @ make_common x @ acc) rest
   in
-  List.rev (aux [] [] [] hunk.lines first_change First)
+
+  start [] hunk.lines
 
 let test_of_hunk () =
   Printf.printf "Starting test_of_hunk\n";
@@ -105,10 +87,7 @@ let test_of_hunk () =
       | Changed { mine; their; order } ->
           Printf.printf "  Changed: mine=[%s], their=[%s], order=%s\n"
             (String.concat ";" mine) (String.concat ";" their)
-            (match order with
-            | Mine -> "Mine"
-            | Their -> "Their"
-            | Equal -> "Equal"))
+            (match order with Mine -> "Mine" | Their -> "Their"))
     result;
   Printf.printf "Expected result:\n";
   List.iter
@@ -117,10 +96,7 @@ let test_of_hunk () =
       | Changed { mine; their; order } ->
           Printf.printf "  Changed: mine=[%s], their=[%s], order=%s\n"
             (String.concat ";" mine) (String.concat ";" their)
-            (match order with
-            | Mine -> "Mine"
-            | Their -> "Their"
-            | Equal -> "Equal"))
+            (match order with Mine -> "Mine" | Their -> "Their"))
     example_blocks;
   assert (result = example_blocks);
   Printf.printf "test_of_hunk passed!\n"

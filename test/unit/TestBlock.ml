@@ -1,4 +1,6 @@
-let example_hunk : string Patch.hunk =
+open Diffcessible
+
+let example_hunk1 : string Patch.hunk =
   {
     mine_start = 0;
     mine_len = 2;
@@ -6,99 +8,169 @@ let example_hunk : string Patch.hunk =
     their_len = 2;
     lines = [ `Mine "A"; `Their "B"; `Mine "C"; `Their "D" ];
   }
-(* +A *)
-(* -B *)
-(* +C *)
-(* -D *)
 
-type origin = Mine | Their
-
-type 'a t =
-  | Common of 'a
-  | Changed of { mine : 'a list; their : 'a list; order : origin }
-
-let example_blocks =
+let example_blocks1 =
   [
-    Changed { mine = [ "A" ]; their = [ "B" ]; order = Mine };
-    Changed { mine = [ "C" ]; their = [ "D" ]; order = Mine };
+    Block.Changed { mine = [ "A" ]; their = [ "B" ]; order = Block.Mine };
+    Block.Changed { mine = [ "C" ]; their = [ "D" ]; order = Block.Mine };
   ]
 
-(* let find_first_change (hunk : string Patch.hunk) : origin = *)
-(*   let rec aux lines = *)
-(*     match lines with *)
-(*     | `Common _ :: rest -> aux rest *)
-(*     | `Mine _ :: _ -> Mine *)
-(*     | `Their _ :: _ -> Their *)
-(*     | [] -> Equal *)
-(*   in *)
-(*   aux hunk.lines *)
+let empty_hunk : string Patch.hunk =
+  { mine_start = 0; mine_len = 0; their_start = 0; their_len = 0; lines = [] }
 
-let of_hunk (hunk : 'a Patch.hunk) : 'a t list =
-  let make_block ~adds ~dels =
-    if adds = [] && dels = [] then []
-    else
-      let order = if adds <> [] then Mine else Their in
-      [ Changed { mine = adds; their = dels; order } ]
-  in
-  let make_common c = [ Common c ] in
+let empty_blocks = []
 
-  let rec start acc = function
-    | [] -> List.rev acc
-    | `Mine x :: rest -> collect_mine acc [ x ] rest
-    | `Their x :: rest -> collect_their acc [ x ] rest
-    | `Common x :: rest -> start (make_common x @ acc) rest
-  and collect_mine acc adds = function
-    | [] -> List.rev (make_block ~adds ~dels:[] @ acc)
-    | `Mine x :: rest -> collect_mine acc (x :: adds) rest
-    | `Their x :: rest ->
-        collect_their_after_mine acc (List.rev adds) [ x ] rest
-    | `Common x :: rest ->
-        start (make_block ~adds ~dels:[] @ make_common x @ acc) rest
-  and collect_their acc dels = function
-    | [] -> List.rev (make_block ~adds:[] ~dels @ acc)
-    | `Mine x :: rest -> collect_mine_after_their acc [ x ] (List.rev dels) rest
-    | `Their x :: rest -> collect_their acc (x :: dels) rest
-    | `Common x :: rest ->
-        start (make_block ~adds:[] ~dels @ make_common x @ acc) rest
-  and collect_their_after_mine acc adds dels = function
-    | [] -> List.rev (make_block ~adds ~dels @ acc)
-    | `Mine x :: rest -> collect_mine (make_block ~adds ~dels @ acc) [ x ] rest
-    | `Their x :: rest -> collect_their_after_mine acc adds (x :: dels) rest
-    | `Common x :: rest ->
-        start (make_block ~adds ~dels @ make_common x @ acc) rest
-  and collect_mine_after_their acc adds dels = function
-    | [] -> List.rev (make_block ~adds ~dels @ acc)
-    | `Mine x :: rest -> collect_mine_after_their acc (x :: adds) dels rest
-    | `Their x :: rest ->
-        collect_their (make_block ~adds ~dels @ acc) [ x ] rest
-    | `Common x :: rest ->
-        start (make_block ~adds ~dels @ make_common x @ acc) rest
-  in
+let common_only_hunk : string Patch.hunk =
+  {
+    mine_start = 0;
+    mine_len = 0;
+    their_start = 0;
+    their_len = 0;
+    lines = [ `Common "A"; `Common "B"; `Common "C" ];
+  }
 
-  start [] hunk.lines
+let common_only_blocks =
+  [ Block.Common "A"; Block.Common "B"; Block.Common "C" ]
+
+let mine_only_hunk : string Patch.hunk =
+  {
+    mine_start = 0;
+    mine_len = 3;
+    their_start = 0;
+    their_len = 0;
+    lines = [ `Mine "A"; `Mine "B"; `Mine "C" ];
+  }
+
+let mine_only_blocks =
+  [ Block.Changed { mine = [ "A"; "B"; "C" ]; their = []; order = Block.Mine } ]
+
+let their_only_hunk : string Patch.hunk =
+  {
+    mine_start = 0;
+    mine_len = 0;
+    their_start = 0;
+    their_len = 3;
+    lines = [ `Their "X"; `Their "Y"; `Their "Z" ];
+  }
+
+let their_only_blocks =
+  [
+    Block.Changed { mine = []; their = [ "X"; "Y"; "Z" ]; order = Block.Their };
+  ]
+
+let complex_hunk : string Patch.hunk =
+  {
+    mine_start = 0;
+    mine_len = 3;
+    their_start = 0;
+    their_len = 4;
+    lines =
+      [
+        `Common "A";
+        `Mine "B";
+        `Their "C";
+        `Mine "D";
+        `Their "E";
+        `Common "F";
+        `Mine "G";
+        `Their "H";
+        `Their "I";
+      ];
+  }
+
+let complex_blocks =
+  [
+    Block.Common "A";
+    Block.Changed { mine = [ "B" ]; their = [ "C" ]; order = Block.Mine };
+    Block.Changed { mine = [ "D" ]; their = [ "E" ]; order = Block.Mine };
+    Block.Common "F";
+    Block.Changed { mine = [ "G" ]; their = [ "H"; "I" ]; order = Block.Mine };
+  ]
+
+let string_of_block = function
+  | Block.Common s -> Printf.sprintf "Common %S" s
+  | Block.Changed { mine; their; order } ->
+      Printf.sprintf "Changed { mine = [%s]; their = [%s]; order = %s }"
+        (String.concat "; " (List.map (Printf.sprintf "%S") mine))
+        (String.concat "; " (List.map (Printf.sprintf "%S") their))
+        (match order with Block.Mine -> "Mine" | Block.Their -> "Their")
+
+let string_of_blocks blocks =
+  "[" ^ String.concat "; " (List.map string_of_block blocks) ^ "]"
+
+let string_of_hunk_line = function
+  | `Common s -> Printf.sprintf "`Common %S" s
+  | `Mine s -> Printf.sprintf "`Mine %S" s
+  | `Their s -> Printf.sprintf "`Their %S" s
+
+let string_of_hunk hunk =
+  Printf.sprintf
+    "{ mine_start = %d; mine_len = %d; their_start = %d; their_len = %d; lines \
+     = [%s] }"
+    hunk.Patch.mine_start hunk.Patch.mine_len hunk.Patch.their_start
+    hunk.Patch.their_len
+    (String.concat "; " (List.map string_of_hunk_line hunk.Patch.lines))
+
+let assert_with_message condition message =
+  if not condition then failwith message
 
 let test_of_hunk () =
-  Printf.printf "Starting test_of_hunk\n";
-  let result = of_hunk example_hunk in
-  Printf.printf "of_hunk result:\n";
-  List.iter
-    (function
-      | Common x -> Printf.printf "  Common: %s\n" x
-      | Changed { mine; their; order } ->
-          Printf.printf "  Changed: mine=[%s], their=[%s], order=%s\n"
-            (String.concat ";" mine) (String.concat ";" their)
-            (match order with Mine -> "Mine" | Their -> "Their"))
-    result;
-  Printf.printf "Expected result:\n";
-  List.iter
-    (function
-      | Common x -> Printf.printf "  Common: %s\n" x
-      | Changed { mine; their; order } ->
-          Printf.printf "  Changed: mine=[%s], their=[%s], order=%s\n"
-            (String.concat ";" mine) (String.concat ";" their)
-            (match order with Mine -> "Mine" | Their -> "Their"))
-    example_blocks;
-  assert (result = example_blocks);
-  Printf.printf "test_of_hunk passed!\n"
+  let test_case name hunk expected =
+    let result = Block.of_hunk hunk in
+    assert_with_message (result = expected)
+      (Printf.sprintf "of_hunk failed for %s\nExpected: %s\nGot: %s" name
+         (string_of_blocks expected)
+         (string_of_blocks result))
+  in
+  test_case "example_hunk1" example_hunk1 example_blocks1;
+  test_case "empty_hunk" empty_hunk empty_blocks;
+  test_case "common_only_hunk" common_only_hunk common_only_blocks;
+  test_case "mine_only_hunk" mine_only_hunk mine_only_blocks;
+  test_case "their_only_hunk" their_only_hunk their_only_blocks;
+  test_case "complex_hunk" complex_hunk complex_blocks
 
-let () = test_of_hunk ()
+let test_to_hunk () =
+  let test_case name blocks expected =
+    let result = Block.to_hunk blocks in
+    assert_with_message (result = expected)
+      (Printf.sprintf "to_hunk failed for %s\nExpected: %s\nGot: %s" name
+         (string_of_hunk expected) (string_of_hunk result))
+  in
+  test_case "example_blocks1" example_blocks1 example_hunk1;
+  test_case "empty_blocks" empty_blocks empty_hunk;
+  test_case "common_only_blocks" common_only_blocks common_only_hunk;
+  test_case "mine_only_blocks" mine_only_blocks mine_only_hunk;
+  test_case "their_only_blocks" their_only_blocks their_only_hunk;
+  test_case "complex_blocks" complex_blocks complex_hunk
+
+let test_roundtrip () =
+  let test_roundtrip_for name hunk =
+    let roundtrip = hunk |> Block.of_hunk |> Block.to_hunk in
+    assert_with_message (roundtrip = hunk)
+      (Printf.sprintf "Roundtrip failed for %s\nOriginal: %s\nRoundtrip: %s"
+         name (string_of_hunk hunk) (string_of_hunk roundtrip))
+  in
+  test_roundtrip_for "example_hunk1" example_hunk1;
+  test_roundtrip_for "empty_hunk" empty_hunk;
+  test_roundtrip_for "common_only_hunk" common_only_hunk;
+  test_roundtrip_for "mine_only_hunk" mine_only_hunk;
+  test_roundtrip_for "their_only_hunk" their_only_hunk;
+  test_roundtrip_for "complex_hunk" complex_hunk
+
+let run_tests () =
+  let run_test name f =
+    try
+      Printf.printf "Running %s...\n" name;
+      f ();
+      Printf.printf "%s passed.\n\n" name
+    with
+    | Failure msg -> Printf.printf "%s failed:\n%s\n\n" name msg
+    | exn ->
+        Printf.printf "%s failed with unexpected exception:\n%s\n\n" name
+          (Printexc.to_string exn)
+  in
+  run_test "TestBlock::test_of_hunk" test_of_hunk;
+  run_test "TestBlock::test_to_hunk" test_to_hunk;
+  run_test "TestBlock::test_roundtrip" test_roundtrip
+
+let () = run_tests ()

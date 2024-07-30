@@ -9,7 +9,7 @@ let of_hunk (hunk_lines : 'a Patch.line list) : 'a t list =
     let rec aux acc lines =
       match lines with
       | `Mine x :: rest -> aux (x :: acc) rest
-      | rest -> (List.rev acc, rest)
+      | rest -> (acc, rest)
     in
     aux [] lines
   in
@@ -17,7 +17,7 @@ let of_hunk (hunk_lines : 'a Patch.line list) : 'a t list =
     let rec aux acc lines =
       match lines with
       | `Their x :: rest -> aux (x :: acc) rest
-      | rest -> (List.rev acc, rest)
+      | rest -> (acc, rest)
     in
     aux [] lines
   in
@@ -25,16 +25,9 @@ let of_hunk (hunk_lines : 'a Patch.line list) : 'a t list =
     if adds = [] && dels = [] then []
     else
       let order = if adds <> [] then Mine else Their in
-      [ Changed { mine = adds; their = dels; order } ]
+      [ Changed { mine = List.rev adds; their = List.rev dels; order } ]
   in
-  let make_common c = [ Common c ] in
-  let finish_block acc adds dels rest next_state =
-    let new_acc = make_block ~adds ~dels @ acc in
-    match rest with
-    | [] -> List.rev new_acc
-    | `Common x :: rest' -> next_state (make_common x @ new_acc) rest'
-    | _ -> next_state new_acc rest
-  in
+  let make_common c = Common c in
   let rec process acc = function
     | [] -> List.rev acc
     | `Mine _ :: _ as lines -> (
@@ -42,16 +35,16 @@ let of_hunk (hunk_lines : 'a Patch.line list) : 'a t list =
         match rest with
         | `Their _ :: _ ->
             let dels, rest' = collect_consecutive_removed rest in
-            finish_block acc adds dels rest' process
-        | _ -> finish_block acc adds [] rest process)
+            process (make_block ~adds ~dels @ acc) rest'
+        | _ -> process (make_block ~adds ~dels:[] @ acc) rest)
     | `Their _ :: _ as lines -> (
         let dels, rest = collect_consecutive_removed lines in
         match rest with
         | `Mine _ :: _ ->
             let adds, rest' = collect_consecutive_added rest in
-            finish_block acc adds dels rest' process
-        | _ -> finish_block acc [] dels rest process)
-    | `Common x :: rest -> process (make_common x @ acc) rest
+            process (make_block ~adds ~dels @ acc) rest'
+        | _ -> process (make_block ~adds:[] ~dels @ acc) rest)
+    | `Common x :: rest -> process (make_common x :: acc) rest
   in
   process [] hunk_lines
 

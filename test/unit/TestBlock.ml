@@ -1,84 +1,50 @@
 open Diffcessible
 
-let example_hunk1 : string Patch.hunk =
-  {
-    mine_start = 0;
-    mine_len = 2;
-    their_start = 0;
-    their_len = 2;
-    lines = [ `Mine "A"; `Their "B"; `Mine "C"; `Their "D" ];
-  }
+let example_hunk1 : string Patch.line list =
+  [ `Mine "A"; `Their "B"; `Mine "C"; `Their "D" ]
 
-let example_blocks1 =
+let example_blocks1 : string Block.t list =
   [
     Block.Changed { mine = [ "A" ]; their = [ "B" ]; order = Block.Mine };
     Block.Changed { mine = [ "C" ]; their = [ "D" ]; order = Block.Mine };
   ]
 
-let empty_hunk : string Patch.hunk =
-  { mine_start = 0; mine_len = 0; their_start = 0; their_len = 0; lines = [] }
+let empty_hunk : string Patch.line list = []
 
-let empty_blocks = []
+let empty_blocks : string Block.t list = []
 
-let common_only_hunk : string Patch.hunk =
-  {
-    mine_start = 0;
-    mine_len = 0;
-    their_start = 0;
-    their_len = 0;
-    lines = [ `Common "A"; `Common "B"; `Common "C" ];
-  }
+let common_only_hunk : string Patch.line list =
+  [ `Common "A"; `Common "B"; `Common "C" ]
 
-let common_only_blocks =
+let common_only_blocks : string Block.t list =
   [ Block.Common "A"; Block.Common "B"; Block.Common "C" ]
 
-let mine_only_hunk : string Patch.hunk =
-  {
-    mine_start = 0;
-    mine_len = 3;
-    their_start = 0;
-    their_len = 0;
-    lines = [ `Mine "A"; `Mine "B"; `Mine "C" ];
-  }
+let mine_only_hunk : string Patch.line list =
+  [ `Mine "A"; `Mine "B"; `Mine "C" ]
 
-let mine_only_blocks =
+let mine_only_blocks : string Block.t list =
   [ Block.Changed { mine = [ "A"; "B"; "C" ]; their = []; order = Block.Mine } ]
 
-let their_only_hunk : string Patch.hunk =
-  {
-    mine_start = 0;
-    mine_len = 0;
-    their_start = 0;
-    their_len = 3;
-    lines = [ `Their "X"; `Their "Y"; `Their "Z" ];
-  }
+let their_only_hunk : string Patch.line list =
+  [ `Their "X"; `Their "Y"; `Their "Z" ]
 
-let their_only_blocks =
+let their_only_blocks : string Block.t list =
+  [ Block.Changed { mine = []; their = [ "X"; "Y"; "Z" ]; order = Block.Their } ]
+
+let complex_hunk : string Patch.line list =
   [
-    Block.Changed { mine = []; their = [ "X"; "Y"; "Z" ]; order = Block.Their };
+    `Common "A";
+    `Mine "B";
+    `Their "C";
+    `Mine "D";
+    `Their "E";
+    `Common "F";
+    `Mine "G";
+    `Their "H";
+    `Their "I";
   ]
 
-let complex_hunk : string Patch.hunk =
-  {
-    mine_start = 0;
-    mine_len = 3;
-    their_start = 0;
-    their_len = 4;
-    lines =
-      [
-        `Common "A";
-        `Mine "B";
-        `Their "C";
-        `Mine "D";
-        `Their "E";
-        `Common "F";
-        `Mine "G";
-        `Their "H";
-        `Their "I";
-      ];
-  }
-
-let complex_blocks =
+let complex_blocks : string Block.t list =
   [
     Block.Common "A";
     Block.Changed { mine = [ "B" ]; their = [ "C" ]; order = Block.Mine };
@@ -104,12 +70,7 @@ let string_of_hunk_line = function
   | `Their s -> Printf.sprintf "`Their %S" s
 
 let string_of_hunk hunk =
-  Printf.sprintf
-    "{ mine_start = %d; mine_len = %d; their_start = %d; their_len = %d; lines \
-     = [%s] }"
-    hunk.Patch.mine_start hunk.Patch.mine_len hunk.Patch.their_start
-    hunk.Patch.their_len
-    (String.concat "; " (List.map string_of_hunk_line hunk.Patch.lines))
+  "[" ^ String.concat "; " (List.map string_of_hunk_line hunk) ^ "]"
 
 let assert_with_message condition message =
   if not condition then failwith message

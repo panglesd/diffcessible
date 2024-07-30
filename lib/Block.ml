@@ -22,29 +22,20 @@ let of_hunk (hunk_lines : 'a Patch.line list) : 'a t list =
     aux [] lines
   in
   let make_block ~adds ~dels =
-    if adds = [] && dels = [] then []
-    else
-      let order = if adds <> [] then Mine else Their in
-      [ Changed { mine = List.rev adds; their = List.rev dels; order } ]
+    let order = if adds <> [] then Mine else Their in
+    Changed { mine = List.rev adds; their = List.rev dels; order }
   in
-  let make_common c = Common c in
   let rec process acc = function
     | [] -> List.rev acc
-    | `Mine _ :: _ as lines -> (
+    | `Mine _ :: _ as lines ->
         let adds, rest = collect_consecutive_added lines in
-        match rest with
-        | `Their _ :: _ ->
-            let dels, rest' = collect_consecutive_removed rest in
-            process (make_block ~adds ~dels @ acc) rest'
-        | _ -> process (make_block ~adds ~dels:[] @ acc) rest)
-    | `Their _ :: _ as lines -> (
+        let dels, rest' = collect_consecutive_removed rest in
+        process (make_block ~adds ~dels :: acc) rest'
+    | `Their _ :: _ as lines ->
         let dels, rest = collect_consecutive_removed lines in
-        match rest with
-        | `Mine _ :: _ ->
-            let adds, rest' = collect_consecutive_added rest in
-            process (make_block ~adds ~dels @ acc) rest'
-        | _ -> process (make_block ~adds:[] ~dels @ acc) rest)
-    | `Common x :: rest -> process (make_common x :: acc) rest
+        let adds, rest' = collect_consecutive_added rest in
+        process (make_block ~adds ~dels :: acc) rest'
+    | `Common x :: rest -> process (Common x :: acc) rest
   in
   process [] hunk_lines
 

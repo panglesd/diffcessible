@@ -10,7 +10,6 @@ let example_blocks1 : string Block.t list =
   ]
 
 let empty_hunk : string Patch.line list = []
-
 let empty_blocks : string Block.t list = []
 
 let common_only_hunk : string Patch.line list =
@@ -29,7 +28,9 @@ let their_only_hunk : string Patch.line list =
   [ `Their "X"; `Their "Y"; `Their "Z" ]
 
 let their_only_blocks : string Block.t list =
-  [ Block.Changed { mine = []; their = [ "X"; "Y"; "Z" ]; order = Block.Their } ]
+  [
+    Block.Changed { mine = []; their = [ "X"; "Y"; "Z" ]; order = Block.Their };
+  ]
 
 let complex_hunk : string Patch.line list =
   [

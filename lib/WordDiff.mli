@@ -1,26 +1,16 @@
 type word = Unchanged of string | Changed of string
 type line_content = word list
 
-type word_diff =
-  | WDeleted of string array
-  | WAdded of string array
-  | WEqual of string array
+val compute : string Block.t -> line_content Block.t
+val render_hunk_lines : line_content Patch.line list -> Nottui.ui
+val render_hunk : string Patch.hunk -> Nottui.Ui.t
+(* type block_origin = Mine | Their | None
+   type 'a block_content = Entry of 'a | Newline
 
-type line_change =
-  | CommonWord of string
-  | AddedWord of string
-  | DeletedWord of string
-  | ModifiedDiff of word_diff list
-
-type hunk = {
-  mine_start : int;
-  mine_len : int;
-  their_start : int;
-  their_len : int;
-  lines : line_change list;
-}
-
-val compute : string Patch.hunk -> hunk
-
-(* val compute : string Block.t -> line_content Block.t *)
-val render_hunk : hunk -> Nottui.ui
+   type 'a t =
+     | Common of 'a block_content
+     | Changed of {
+         mine : 'a block_content list;
+         their : 'a block_content list;
+         order : block_origin;
+       } *)

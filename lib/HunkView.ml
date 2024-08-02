@@ -68,9 +68,23 @@ let ui_hunk_summary (hunk : string Patch.hunk) : Nottui.ui =
     ]
 
 let ui_unified_diff (hunk : string Patch.hunk) : Nottui.ui =
-  let word_diff_hunk = WordDiff.compute hunk in
   let hunk_summary = ui_hunk_summary hunk in
-  let hunk_content = WordDiff.render_hunk word_diff_hunk in
+  let hunk_content =
+    let blocks = Block.of_hunk hunk.Patch.lines in
+    let single_line_changes =
+      List.for_all
+        (function
+          | Block.Changed { mine; their; _ } ->
+              List.length mine = 1 && List.length their = 1
+          | _ -> true)
+        blocks
+    in
+    if single_line_changes then
+      let word_diff_blocks = List.map WordDiff.compute blocks in
+      let word_diff_lines = Block.to_hunk word_diff_blocks in
+      WordDiff.render_hunk_lines word_diff_lines
+    else WordDiff.render_hunk hunk
+  in
   Ui.vcat [ hunk_summary; hunk_content ]
 
 let current_hunks (z_patches : string Patch.t Zipper.t) : Nottui.ui =

@@ -5,18 +5,8 @@ let example_hunk1 : string Patch.line list =
 
 let example_blocks1 : string Block.t list =
   [
-    Block.Changed
-      {
-        mine = [ Entry "A"; Newline ];
-        their = [ Entry "B"; Newline ];
-        order = Block.Mine;
-      };
-    Block.Changed
-      {
-        mine = [ Entry "C"; Newline ];
-        their = [ Entry "D"; Newline ];
-        order = Block.Mine;
-      };
+    Block.Changed { mine = [ "A" ]; their = [ "B" ]; order = Block.Mine };
+    Block.Changed { mine = [ "C" ]; their = [ "D" ]; order = Block.Mine };
   ]
 
 let empty_hunk : string Patch.line list = []
@@ -26,34 +16,20 @@ let common_only_hunk : string Patch.line list =
   [ `Common "A"; `Common "B"; `Common "C" ]
 
 let common_only_blocks : string Block.t list =
-  [
-    Block.Common (Entry "A"); Block.Common (Entry "B"); Block.Common (Entry "C");
-  ]
+  [ Block.Common "A"; Block.Common "B"; Block.Common "C" ]
 
 let mine_only_hunk : string Patch.line list =
   [ `Mine "A"; `Mine "B"; `Mine "C" ]
 
 let mine_only_blocks : string Block.t list =
-  [
-    Block.Changed
-      {
-        mine = [ Entry "A"; Newline; Entry "B"; Newline; Entry "C"; Newline ];
-        their = [];
-        order = Block.Mine;
-      };
-  ]
+  [ Block.Changed { mine = [ "A"; "B"; "C" ]; their = []; order = Block.Mine } ]
 
 let their_only_hunk : string Patch.line list =
   [ `Their "X"; `Their "Y"; `Their "Z" ]
 
 let their_only_blocks : string Block.t list =
   [
-    Block.Changed
-      {
-        mine = [];
-        their = [ Entry "X"; Newline; Entry "Y"; Newline; Entry "Z"; Newline ];
-        order = Block.Their;
-      };
+    Block.Changed { mine = []; their = [ "X"; "Y"; "Z" ]; order = Block.Their };
   ]
 
 let complex_hunk : string Patch.line list =
@@ -71,26 +47,11 @@ let complex_hunk : string Patch.line list =
 
 let complex_blocks : string Block.t list =
   [
-    Block.Common (Entry "A");
-    Block.Changed
-      {
-        mine = [ Entry "B"; Newline ];
-        their = [ Entry "C"; Newline ];
-        order = Block.Mine;
-      };
-    Block.Changed
-      {
-        mine = [ Entry "D"; Newline ];
-        their = [ Entry "E"; Newline ];
-        order = Block.Mine;
-      };
-    Block.Common (Entry "F");
-    Block.Changed
-      {
-        mine = [ Entry "G"; Newline ];
-        their = [ Entry "H"; Newline; Entry "I"; Newline ];
-        order = Block.Mine;
-      };
+    Block.Common "A";
+    Block.Changed { mine = [ "B" ]; their = [ "C" ]; order = Block.Mine };
+    Block.Changed { mine = [ "D" ]; their = [ "E" ]; order = Block.Mine };
+    Block.Common "F";
+    Block.Changed { mine = [ "G" ]; their = [ "H"; "I" ]; order = Block.Mine };
   ]
 
 let alternating_add_remove_hunk1 : string Patch.line list =
@@ -98,14 +59,8 @@ let alternating_add_remove_hunk1 : string Patch.line list =
 
 let alternating_add_remove_blocks1 : string Block.t list =
   [
-    Block.Changed
-      {
-        mine = [ Entry "A"; Newline ];
-        their = [ Entry "B"; Newline ];
-        order = Block.Mine;
-      };
-    Block.Changed
-      { mine = [ Entry "C"; Newline ]; their = []; order = Block.Mine };
+    Block.Changed { mine = [ "A" ]; their = [ "B" ]; order = Block.Mine };
+    Block.Changed { mine = [ "C" ]; their = []; order = Block.Mine };
   ]
 
 let alternating_remove_add_hunk1 : string Patch.line list =
@@ -113,14 +68,8 @@ let alternating_remove_add_hunk1 : string Patch.line list =
 
 let alternating_remove_add_blocks1 : string Block.t list =
   [
-    Block.Changed
-      {
-        mine = [ Entry "Y"; Newline ];
-        their = [ Entry "X"; Newline ];
-        order = Block.Their;
-      };
-    Block.Changed
-      { mine = []; their = [ Entry "Z"; Newline ]; order = Block.Their };
+    Block.Changed { mine = [ "Y" ]; their = [ "X" ]; order = Block.Their };
+    Block.Changed { mine = []; their = [ "Z" ]; order = Block.Their };
   ]
 
 let complex_alternating_hunk : string Patch.line list =
@@ -142,43 +91,13 @@ let complex_alternating_hunk : string Patch.line list =
 
 let complex_alternating_blocks : string Block.t list =
   [
-    Block.Changed
-      {
-        mine = [ Entry "A"; Newline ];
-        their = [ Entry "B"; Newline ];
-        order = Block.Mine;
-      };
-    Block.Changed
-      {
-        mine = [ Entry "C"; Newline ];
-        their = [ Entry "D"; Newline ];
-        order = Block.Mine;
-      };
-    Block.Changed
-      {
-        mine = [ Entry "E"; Newline ];
-        their = [ Entry "F"; Newline ];
-        order = Block.Mine;
-      };
-    Block.Changed
-      {
-        mine = [ Entry "G"; Newline ];
-        their = [ Entry "H"; Newline ];
-        order = Block.Mine;
-      };
-    Block.Common (Entry "I");
-    Block.Changed
-      {
-        mine = [ Entry "K"; Newline ];
-        their = [ Entry "J"; Newline ];
-        order = Block.Their;
-      };
-    Block.Changed
-      {
-        mine = [ Entry "M"; Newline ];
-        their = [ Entry "L"; Newline ];
-        order = Block.Their;
-      };
+    Block.Changed { mine = [ "A" ]; their = [ "B" ]; order = Block.Mine };
+    Block.Changed { mine = [ "C" ]; their = [ "D" ]; order = Block.Mine };
+    Block.Changed { mine = [ "E" ]; their = [ "F" ]; order = Block.Mine };
+    Block.Changed { mine = [ "G" ]; their = [ "H" ]; order = Block.Mine };
+    Block.Common "I";
+    Block.Changed { mine = [ "K" ]; their = [ "J" ]; order = Block.Their };
+    Block.Changed { mine = [ "M" ]; their = [ "L" ]; order = Block.Their };
   ]
 
 let multiple_consecutive_changes_hunk : string Patch.line list =
@@ -201,37 +120,20 @@ let multiple_consecutive_changes_hunk : string Patch.line list =
 let multiple_consecutive_changes_blocks : string Block.t list =
   [
     Block.Changed
-      {
-        mine = [ Entry "A"; Newline; Entry "B"; Newline ];
-        their = [ Entry "C"; Newline; Entry "D"; Newline ];
-        order = Block.Mine;
-      };
+      { mine = [ "A"; "B" ]; their = [ "C"; "D" ]; order = Block.Mine };
     Block.Changed
-      {
-        mine = [ Entry "E"; Newline; Entry "F"; Newline ];
-        their = [ Entry "G"; Newline; Entry "H"; Newline ];
-        order = Block.Mine;
-      };
-    Block.Common (Entry "I");
+      { mine = [ "E"; "F" ]; their = [ "G"; "H" ]; order = Block.Mine };
+    Block.Common "I";
     Block.Changed
-      {
-        mine = [ Entry "L"; Newline; Entry "M"; Newline ];
-        their = [ Entry "J"; Newline; Entry "K"; Newline ];
-        order = Block.Their;
-      };
+      { mine = [ "L"; "M" ]; their = [ "J"; "K" ]; order = Block.Their };
   ]
 
-let string_of_block_content (block_content : 'a Block.block_content) =
-  match block_content with
-  | Entry x -> Printf.sprintf "Entry %s" x
-  | Newline -> "Newline"
-
 let string_of_block = function
-  | Block.Common x -> Printf.sprintf "Common (%s)" (string_of_block_content x)
+  | Block.Common x -> Printf.sprintf "Common %S" x
   | Block.Changed { mine; their; order } ->
       Printf.sprintf "Changed { mine = [%s]; their = [%s]; order = %s }"
-        (String.concat "; " (List.map string_of_block_content mine))
-        (String.concat "; " (List.map string_of_block_content their))
+        (String.concat "; " (List.map (Printf.sprintf "%S") mine))
+        (String.concat "; " (List.map (Printf.sprintf "%S") their))
         (match order with
         | Block.Mine -> "Mine"
         | Block.Their -> "Their"

@@ -1,57 +1,4 @@
-type word = Unchanged of string | Changed of string
-type line_content = word list
-
-let string_to_words s = Array.of_list (String.split_on_char ' ' s)
-let longest xs ys = if List.length xs > List.length ys then xs else ys
-
-let lcs xs' ys' =
-  let xs = Array.of_list xs' and ys = Array.of_list ys' in
-  let n = Array.length xs and m = Array.length ys in
-  let a = Array.make_matrix (n + 1) (m + 1) [] in
-  for i = n - 1 downto 0 do
-    for j = m - 1 downto 0 do
-      a.(i).(j) <-
-        (if xs.(i) = ys.(j) then xs.(i) :: a.(i + 1).(j + 1)
-         else longest a.(i).(j + 1) a.(i + 1).(j))
-    done
-  done;
-  a.(0).(0)
-
-let diff_words (s1 : string) (s2 : string) : line_content * line_content =
-  let words1 = Array.to_list (string_to_words s1) in
-  let words2 = Array.to_list (string_to_words s2) in
-  let common = lcs words1 words2 in
-
-  let rec construct_diff w1 w2 lcs acc_mine acc_their =
-    match (w1, w2, lcs) with
-    | [], [], [] -> (List.rev acc_mine, List.rev acc_their)
-    | x :: xs, y :: ys, z :: zs -> (
-        match (x = z, y = z) with
-        | true, true ->
-            construct_diff xs ys zs (Unchanged x :: acc_mine)
-              (Unchanged y :: acc_their)
-        | false, true ->
-            construct_diff xs (y :: ys) (z :: zs) (Changed x :: acc_mine)
-              acc_their
-        | true, false ->
-            construct_diff (x :: xs) ys (z :: zs) acc_mine
-              (Changed y :: acc_their)
-        | false, false ->
-            construct_diff xs ys (z :: zs) (Changed x :: acc_mine)
-              (Changed y :: acc_their))
-    | x :: xs, [], lcs ->
-        construct_diff xs [] lcs (Changed x :: acc_mine) acc_their
-    | [], y :: ys, lcs ->
-        construct_diff [] ys lcs acc_mine (Changed y :: acc_their)
-    | x :: xs, y :: ys, [] ->
-        construct_diff xs ys [] (Changed x :: acc_mine) (Changed y :: acc_their)
-    | [], [], _ :: _ -> assert false
-    (* Since lcs is the longest common subsequence, this case cannot happen *)
-  in
-
-  construct_diff words1 words2 common [] []
-
-(* Test cases *)
+open Diffcessible
 
 let test_lcs_1 = ([ "a"; "b"; "c" ], [ "a"; "b"; "c" ], [ "a"; "b"; "c" ])
 let test_lcs_2 = ([ "a"; "b"; "c" ], [ "d"; "e"; "f" ], [])
@@ -76,37 +23,57 @@ let test_lcs_8 = ([ "a"; "b"; "c" ], [], []) (* One non-empty, one empty *)
 let test_diff_1 =
   ( "abc def",
     "abc ghi",
-    ([ Unchanged "abc"; Changed "def" ], [ Unchanged "abc"; Changed "ghi" ]) )
+    ( [ WordDiff.Unchanged "abc"; WordDiff.Changed "def" ],
+      [ WordDiff.Unchanged "abc"; WordDiff.Changed "ghi" ] ) )
 
 let test_diff_2 =
-  ("", "abc def", ([ Changed "" ], [ Changed "abc"; Changed "def" ]))
+  ( "",
+    "abc def",
+    ([ WordDiff.Changed "" ], [ WordDiff.Changed "abc"; WordDiff.Changed "def" ])
+  )
 
 let test_diff_3 =
-  ("abc def", "", ([ Changed "abc"; Changed "def" ], [ Changed "" ]))
+  ( "abc def",
+    "",
+    ([ WordDiff.Changed "abc"; WordDiff.Changed "def" ], [ WordDiff.Changed "" ])
+  )
 
 let test_diff_4 =
   ( "abc def ghi",
     "abc def jkl",
-    ( [ Unchanged "abc"; Unchanged "def"; Changed "ghi" ],
-      [ Unchanged "abc"; Unchanged "def"; Changed "jkl" ] ) )
+    ( [
+        WordDiff.Unchanged "abc";
+        WordDiff.Unchanged "def";
+        WordDiff.Changed "ghi";
+      ],
+      [
+        WordDiff.Unchanged "abc";
+        WordDiff.Unchanged "def";
+        WordDiff.Changed "jkl";
+      ] ) )
 
 let test_diff_5 =
   ( "  abc  def  ",
     " abc def ",
     ( [
-        Unchanged "";
-        Changed "";
-        Unchanged "abc";
-        Changed "";
-        Unchanged "def";
-        Unchanged "";
-        Changed "";
+        WordDiff.Unchanged "";
+        WordDiff.Changed "";
+        WordDiff.Unchanged "abc";
+        WordDiff.Changed "";
+        WordDiff.Unchanged "def";
+        WordDiff.Unchanged "";
+        WordDiff.Changed "";
       ],
-      [ Unchanged ""; Unchanged "abc"; Unchanged "def"; Unchanged "" ] ) )
+      [
+        WordDiff.Unchanged "";
+        WordDiff.Unchanged "abc";
+        WordDiff.Unchanged "def";
+        WordDiff.Unchanged "";
+      ] ) )
 
 let string_of_word = function
-  | Unchanged s -> Printf.sprintf "Unchanged %S" s
-  | Changed s -> Printf.sprintf "Changed %S" s
+  | WordDiff.Unchanged s -> Printf.sprintf "Unchanged %S" s
+  | WordDiff.Changed s -> Printf.sprintf "Changed %S" s
 
 let string_of_line_content lc =
   "[" ^ String.concat "; " (List.map string_of_word lc) ^ "]"
@@ -121,7 +88,7 @@ let assert_with_message condition message =
 
 let test_lcs () =
   let test_case (input1, input2, expected) =
-    let result = lcs input1 input2 in
+    let result = WordDiff.lcs input1 input2 in
     assert_with_message (result = expected)
       (Printf.sprintf
          "LCS failed\nInput1: %s\nInput2: %s\nExpected: %s\nGot: %s"
@@ -143,7 +110,7 @@ let test_lcs () =
 
 let test_diff_words () =
   let test_case (input1, input2, expected) =
-    let result = diff_words input1 input2 in
+    let result = WordDiff.diff_words input1 input2 in
     assert_with_message (result = expected)
       (Printf.sprintf
          "diff_words failed\nInput1: %S\nInput2: %S\nExpected: %s\nGot: %s"

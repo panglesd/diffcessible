@@ -1,4 +1,4 @@
 (tests
- (names TestZipper TestBlock)
+ (names TestZipper TestBlock TestWordDiff)
  (libraries diffcessible notty nottui lwd patch)
- (modules TestZipper TestBlock))
+ (modules TestZipper TestBlock TestWordDiff))

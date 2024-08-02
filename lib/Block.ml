@@ -10,11 +10,11 @@ type 'a t =
     }
 
 let rec first_change_order (hunk_lines : 'a Patch.line list) : block_origin =
-    match hunk_lines with
-    | [] -> None
-    | `Common _ :: rest -> first_change_order rest
-    | `Mine _ :: _ -> Mine
-    | `Their _ :: _ -> Their
+  match hunk_lines with
+  | [] -> None
+  | `Common _ :: rest -> first_change_order rest
+  | `Mine _ :: _ -> Mine
+  | `Their _ :: _ -> Their
 
 let of_hunk (hunk_lines : 'a Patch.line list) : 'a t list =
   let collect_consecutive_added lines =

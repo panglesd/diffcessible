@@ -5,8 +5,18 @@ let example_hunk1 : string Patch.line list =
 
 let example_blocks1 : string Block.t list =
   [
-    Block.Changed { mine = [ "A" ]; their = [ "B" ]; order = Block.Mine };
-    Block.Changed { mine = [ "C" ]; their = [ "D" ]; order = Block.Mine };
+    Block.Changed
+      {
+        mine = [ Entry "A"; Newline ];
+        their = [ Entry "B"; Newline ];
+        order = Block.Mine;
+      };
+    Block.Changed
+      {
+        mine = [ Entry "C"; Newline ];
+        their = [ Entry "D"; Newline ];
+        order = Block.Mine;
+      };
   ]
 
 let empty_hunk : string Patch.line list = []
@@ -16,20 +26,34 @@ let common_only_hunk : string Patch.line list =
   [ `Common "A"; `Common "B"; `Common "C" ]
 
 let common_only_blocks : string Block.t list =
-  [ Block.Common "A"; Block.Common "B"; Block.Common "C" ]
+  [
+    Block.Common (Entry "A"); Block.Common (Entry "B"); Block.Common (Entry "C");
+  ]
 
 let mine_only_hunk : string Patch.line list =
   [ `Mine "A"; `Mine "B"; `Mine "C" ]
 
 let mine_only_blocks : string Block.t list =
-  [ Block.Changed { mine = [ "A"; "B"; "C" ]; their = []; order = Block.Mine } ]
+  [
+    Block.Changed
+      {
+        mine = [ Entry "A"; Newline; Entry "B"; Newline; Entry "C"; Newline ];
+        their = [];
+        order = Block.Mine;
+      };
+  ]
 
 let their_only_hunk : string Patch.line list =
   [ `Their "X"; `Their "Y"; `Their "Z" ]
 
 let their_only_blocks : string Block.t list =
   [
-    Block.Changed { mine = []; their = [ "X"; "Y"; "Z" ]; order = Block.Their };
+    Block.Changed
+      {
+        mine = [];
+        their = [ Entry "X"; Newline; Entry "Y"; Newline; Entry "Z"; Newline ];
+        order = Block.Their;
+      };
   ]
 
 let complex_hunk : string Patch.line list =
@@ -47,20 +71,171 @@ let complex_hunk : string Patch.line list =
 
 let complex_blocks : string Block.t list =
   [
-    Block.Common "A";
-    Block.Changed { mine = [ "B" ]; their = [ "C" ]; order = Block.Mine };
-    Block.Changed { mine = [ "D" ]; their = [ "E" ]; order = Block.Mine };
-    Block.Common "F";
-    Block.Changed { mine = [ "G" ]; their = [ "H"; "I" ]; order = Block.Mine };
+    Block.Common (Entry "A");
+    Block.Changed
+      {
+        mine = [ Entry "B"; Newline ];
+        their = [ Entry "C"; Newline ];
+        order = Block.Mine;
+      };
+    Block.Changed
+      {
+        mine = [ Entry "D"; Newline ];
+        their = [ Entry "E"; Newline ];
+        order = Block.Mine;
+      };
+    Block.Common (Entry "F");
+    Block.Changed
+      {
+        mine = [ Entry "G"; Newline ];
+        their = [ Entry "H"; Newline; Entry "I"; Newline ];
+        order = Block.Mine;
+      };
   ]
 
+let alternating_add_remove_hunk1 : string Patch.line list =
+  [ `Mine "A"; `Their "B"; `Mine "C" ]
+
+let alternating_add_remove_blocks1 : string Block.t list =
+  [
+    Block.Changed
+      {
+        mine = [ Entry "A"; Newline ];
+        their = [ Entry "B"; Newline ];
+        order = Block.Mine;
+      };
+    Block.Changed
+      { mine = [ Entry "C"; Newline ]; their = []; order = Block.Mine };
+  ]
+
+let alternating_remove_add_hunk1 : string Patch.line list =
+  [ `Their "X"; `Mine "Y"; `Their "Z" ]
+
+let alternating_remove_add_blocks1 : string Block.t list =
+  [
+    Block.Changed
+      {
+        mine = [ Entry "Y"; Newline ];
+        their = [ Entry "X"; Newline ];
+        order = Block.Their;
+      };
+    Block.Changed
+      { mine = []; their = [ Entry "Z"; Newline ]; order = Block.Their };
+  ]
+
+let complex_alternating_hunk : string Patch.line list =
+  [
+    `Mine "A";
+    `Their "B";
+    `Mine "C";
+    `Their "D";
+    `Mine "E";
+    `Their "F";
+    `Mine "G";
+    `Their "H";
+    `Common "I";
+    `Their "J";
+    `Mine "K";
+    `Their "L";
+    `Mine "M";
+  ]
+
+let complex_alternating_blocks : string Block.t list =
+  [
+    Block.Changed
+      {
+        mine = [ Entry "A"; Newline ];
+        their = [ Entry "B"; Newline ];
+        order = Block.Mine;
+      };
+    Block.Changed
+      {
+        mine = [ Entry "C"; Newline ];
+        their = [ Entry "D"; Newline ];
+        order = Block.Mine;
+      };
+    Block.Changed
+      {
+        mine = [ Entry "E"; Newline ];
+        their = [ Entry "F"; Newline ];
+        order = Block.Mine;
+      };
+    Block.Changed
+      {
+        mine = [ Entry "G"; Newline ];
+        their = [ Entry "H"; Newline ];
+        order = Block.Mine;
+      };
+    Block.Common (Entry "I");
+    Block.Changed
+      {
+        mine = [ Entry "K"; Newline ];
+        their = [ Entry "J"; Newline ];
+        order = Block.Their;
+      };
+    Block.Changed
+      {
+        mine = [ Entry "M"; Newline ];
+        their = [ Entry "L"; Newline ];
+        order = Block.Their;
+      };
+  ]
+
+let multiple_consecutive_changes_hunk : string Patch.line list =
+  [
+    `Mine "A";
+    `Mine "B";
+    `Their "C";
+    `Their "D";
+    `Mine "E";
+    `Mine "F";
+    `Their "G";
+    `Their "H";
+    `Common "I";
+    `Their "J";
+    `Their "K";
+    `Mine "L";
+    `Mine "M";
+  ]
+
+let multiple_consecutive_changes_blocks : string Block.t list =
+  [
+    Block.Changed
+      {
+        mine = [ Entry "A"; Newline; Entry "B"; Newline ];
+        their = [ Entry "C"; Newline; Entry "D"; Newline ];
+        order = Block.Mine;
+      };
+    Block.Changed
+      {
+        mine = [ Entry "E"; Newline; Entry "F"; Newline ];
+        their = [ Entry "G"; Newline; Entry "H"; Newline ];
+        order = Block.Mine;
+      };
+    Block.Common (Entry "I");
+    Block.Changed
+      {
+        mine = [ Entry "L"; Newline; Entry "M"; Newline ];
+        their = [ Entry "J"; Newline; Entry "K"; Newline ];
+        order = Block.Their;
+      };
+  ]
+
+let string_of_block_content (block_content : 'a Block.block_content) =
+  match block_content with
+  | Entry x -> Printf.sprintf "Entry %s" x
+  | Newline -> "Newline"
+
 let string_of_block = function
-  | Block.Common s -> Printf.sprintf "Common %S" s
+  | Block.Common x -> Printf.sprintf "Common (%s)" (string_of_block_content x)
   | Block.Changed { mine; their; order } ->
       Printf.sprintf "Changed { mine = [%s]; their = [%s]; order = %s }"
-        (String.concat "; " (List.map (Printf.sprintf "%S") mine))
-        (String.concat "; " (List.map (Printf.sprintf "%S") their))
-        (match order with Block.Mine -> "Mine" | Block.Their -> "Their")
+        (String.concat "; " (List.map string_of_block_content mine))
+        (String.concat "; " (List.map string_of_block_content their))
+        (match order with
+        | Block.Mine -> "Mine"
+        | Block.Their -> "Their"
+        | Block.None -> "None")
 
 let string_of_blocks blocks =
   "[" ^ String.concat "; " (List.map string_of_block blocks) ^ "]"
@@ -89,7 +264,15 @@ let test_of_hunk () =
   test_case "common_only_hunk" common_only_hunk common_only_blocks;
   test_case "mine_only_hunk" mine_only_hunk mine_only_blocks;
   test_case "their_only_hunk" their_only_hunk their_only_blocks;
-  test_case "complex_hunk" complex_hunk complex_blocks
+  test_case "complex_hunk" complex_hunk complex_blocks;
+  test_case "alternating_add_remove_hunk1" alternating_add_remove_hunk1
+    alternating_add_remove_blocks1;
+  test_case "alternating_remove_add_hunk1" alternating_remove_add_hunk1
+    alternating_remove_add_blocks1;
+  test_case "complex_alternating_hunk" complex_alternating_hunk
+    complex_alternating_blocks;
+  test_case "multiple_consecutive_changes_hunk"
+    multiple_consecutive_changes_hunk multiple_consecutive_changes_blocks
 
 let test_to_hunk () =
   let test_case name blocks expected =
@@ -103,7 +286,15 @@ let test_to_hunk () =
   test_case "common_only_blocks" common_only_blocks common_only_hunk;
   test_case "mine_only_blocks" mine_only_blocks mine_only_hunk;
   test_case "their_only_blocks" their_only_blocks their_only_hunk;
-  test_case "complex_blocks" complex_blocks complex_hunk
+  test_case "complex_blocks" complex_blocks complex_hunk;
+  test_case "alternating_add_remove_blocks1" alternating_add_remove_blocks1
+    alternating_add_remove_hunk1;
+  test_case "alternating_remove_add_blocks1" alternating_remove_add_blocks1
+    alternating_remove_add_hunk1;
+  test_case "complex_alternating_blocks" complex_alternating_blocks
+    complex_alternating_hunk;
+  test_case "multiple_consecutive_changes_blocks"
+    multiple_consecutive_changes_blocks multiple_consecutive_changes_hunk
 
 let test_roundtrip () =
   let test_roundtrip_for name hunk =
@@ -117,7 +308,12 @@ let test_roundtrip () =
   test_roundtrip_for "common_only_hunk" common_only_hunk;
   test_roundtrip_for "mine_only_hunk" mine_only_hunk;
   test_roundtrip_for "their_only_hunk" their_only_hunk;
-  test_roundtrip_for "complex_hunk" complex_hunk
+  test_roundtrip_for "complex_hunk" complex_hunk;
+  test_roundtrip_for "alternating_add_remove_hunk1" alternating_add_remove_hunk1;
+  test_roundtrip_for "alternating_remove_add_hunk1" alternating_remove_add_hunk1;
+  test_roundtrip_for "complex_alternating_hunk" complex_alternating_hunk;
+  test_roundtrip_for "multiple_consecutive_changes_hunk"
+    multiple_consecutive_changes_hunk
 
 let run_tests () =
   let run_test name f =

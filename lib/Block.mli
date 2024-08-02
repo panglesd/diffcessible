@@ -1,8 +1,13 @@
-type origin = Mine | Their
+type block_origin = Mine | Their | None
+type 'a block_content = Entry of 'a | Newline
 
 type 'a t =
-  | Common of 'a
-  | Changed of { mine : 'a list; their : 'a list; order : origin }
+  | Common of 'a block_content
+  | Changed of {
+      mine : 'a block_content list;
+      their : 'a block_content list;
+      order : block_origin;
+    }
 
 val of_hunk : 'a Patch.line list -> 'a t list
 

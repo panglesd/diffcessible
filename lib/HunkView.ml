@@ -39,7 +39,7 @@ let split_and_align_hunk hunks : line list * line list =
 
 (* Normal Mode *)
 
-let ui_hunk_summary (hunk : Patch.hunk) : Nottui.ui =
+let ui_hunk_summary (hunk : string Patch.hunk) : Nottui.ui =
   let mine_info =
     if hunk.Patch.mine_len = 0 then "0,0"
     else Printf.sprintf "%d,%d" (hunk.Patch.mine_start + 1) hunk.Patch.mine_len
@@ -67,26 +67,32 @@ let ui_hunk_summary (hunk : Patch.hunk) : Nottui.ui =
       at_symbols;
     ]
 
-let ui_unified_diff (hunk : Patch.hunk) : Nottui.ui =
-  let word_diff_hunk = WordDiff.compute hunk in
+let ui_unified_diff (hunk : string Patch.hunk) : Nottui.ui =
   let hunk_summary = ui_hunk_summary hunk in
-  let hunk_content = WordDiff.render_hunk word_diff_hunk in
+  let hunk_content =
+    let blocks = Block.of_hunk hunk.Patch.lines in
+    let single_line_changes =
+      List.for_all
+        (function
+          | Block.Changed { mine; their; _ } ->
+              List.length mine = 1 && List.length their = 1
+          | _ -> true)
+        blocks
+    in
+    if single_line_changes then
+      let word_diff_blocks = List.map WordDiff.compute blocks in
+      let word_diff_lines = Block.to_hunk word_diff_blocks in
+      WordDiff.render_hunk_lines word_diff_lines
+    else WordDiff.render_hunk hunk
+  in
   Ui.vcat [ hunk_summary; hunk_content ]
 
-let current_hunks (z_patches : Patch.t Zipper.t) : Nottui.ui =
+let current_hunks (z_patches : string Patch.t Zipper.t) : Nottui.ui =
   let p = Zipper.get_focus z_patches in
   let hunks = List.map ui_unified_diff p.Patch.hunks in
   Ui.vcat hunks
 
 (** Side by side diff view implementation **)
-
-let create_summary (start_line_num : int) (hunk_length : int)
-    (attr : Notty.attr) (change_type : [ `Add | `Remove ]) : Nottui.ui =
-  let sign = match change_type with `Add -> "+" | `Remove -> "-" in
-  if hunk_length > 0 then
-    W.string ~attr
-      (Printf.sprintf "@@ %s%d,%d @@" sign start_line_num hunk_length)
-  else W.string ~attr (Printf.sprintf "@@ %s0,0 @@" sign)
 
 let lines_with_numbers (lines : line list) (attr_change : Notty.attr)
     (prefix : string) : Nottui.ui list =
@@ -110,7 +116,15 @@ let lines_with_numbers (lines : line list) (attr_change : Notty.attr)
   in
   process_lines 1 [] lines
 
-let ui_of_hunk_side_by_side (hunk : Patch.hunk) : Nottui.ui =
+let create_summary (start_line_num : int) (hunk_length : int)
+    (attr : Notty.attr) (change_type : [ `Add | `Remove ]) : Nottui.ui =
+  let sign = match change_type with `Add -> "+" | `Remove -> "-" in
+  if hunk_length > 0 then
+    W.string ~attr
+      (Printf.sprintf "@@ %s%d,%d @@" sign start_line_num hunk_length)
+  else W.string ~attr (Printf.sprintf "@@ %s0,0 @@" sign)
+
+let ui_of_hunk_side_by_side (hunk : string Patch.hunk) : Nottui.ui =
   let attr_mine = Notty.A.(fg red ++ st bold) in
   let attr_their = Notty.A.(fg green ++ st bold) in
 
@@ -136,7 +150,8 @@ let ui_of_hunk_side_by_side (hunk : Patch.hunk) : Nottui.ui =
       Ui.resize ~w:0 ~sw:2 (Ui.vcat (summary_their :: content_their));
     ]
 
-let current_hunks_side_by_side (z_patches : Patch.t Zipper.t) : Nottui.ui =
+let current_hunks_side_by_side (z_patches : string Patch.t Zipper.t) : Nottui.ui
+    =
   let p = Zipper.get_focus z_patches in
   let hunks_ui = List.map ui_of_hunk_side_by_side p.Patch.hunks in
   Ui.vcat hunks_ui

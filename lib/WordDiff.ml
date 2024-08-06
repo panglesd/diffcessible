@@ -63,9 +63,16 @@ let compute (block : string Block.t) : line_content Block.t =
       let mine_words, their_words = diff_words mine_str their_str in
       Block.Changed { mine = [ mine_words ]; their = [ their_words ]; order }
 
-let word_to_ui word attr = W.string ~attr (word ^ " ")
+let word_to_ui word attr rendering_mode diff_type =
+  match rendering_mode with
+  | Types.Color -> W.string ~attr (word ^ " ")
+  | Types.TextMarkers -> (
+      match diff_type with
+      | `Equal -> W.string (word ^ " ")
+      | `Deleted -> W.string ("<-" ^ word ^ "/-> ")
+      | `Added -> W.string ("<+" ^ word ^ "/+> "))
 
-let render_diff_line mine_num their_num attr diff_type words =
+let render_diff_line mine_num their_num attr diff_type words rendering_mode =
   let format_line_number =
     match diff_type with
     | `Added -> W.string ~attr (Printf.sprintf "   %2d + " (their_num + 1))
@@ -81,13 +88,15 @@ let render_diff_line mine_num their_num attr diff_type words =
         (List.map
            (function
              | Changed word when diff_type = `Deleted || diff_type = `Added ->
-                 word_to_ui word attr
-             | Unchanged word -> word_to_ui word Notty.A.empty
+                 word_to_ui word attr rendering_mode diff_type
+             | Unchanged word ->
+                 word_to_ui word Notty.A.empty rendering_mode `Equal
              | _ -> Ui.empty)
            words);
     ]
 
-let render_hunk_lines (hunk_lines : line_content Patch.line list) : Nottui.ui =
+let render_hunk_lines (hunk_lines : line_content Patch.line list)
+    (rendering_mode : Types.rendering_mode) : Nottui.ui =
   let rec process_lines mine_num their_num acc = function
     | [] -> List.rev acc
     | line :: rest ->
@@ -97,61 +106,52 @@ let render_hunk_lines (hunk_lines : line_content Patch.line list) : Nottui.ui =
               ( mine_num + 1,
                 their_num + 1,
                 render_diff_line mine_num their_num Notty.A.empty `Equal words
-              )
+                  rendering_mode )
           | `Mine words ->
               ( mine_num + 1,
                 their_num,
                 render_diff_line mine_num their_num
                   Notty.A.(fg red)
-                  `Deleted words )
+                  `Deleted words rendering_mode )
           | `Their words ->
               ( mine_num,
                 their_num + 1,
                 render_diff_line mine_num their_num
                   Notty.A.(fg green)
-                  `Added words )
+                  `Added words rendering_mode )
         in
         process_lines new_mine new_their (ui :: acc) rest
   in
   let lines_ui = process_lines 0 0 [] hunk_lines in
   Ui.vcat lines_ui
 
-let render_diff_line_str (mine_num : int) (their_num : int) (attr : Notty.attr)
-    (diff_type : [ `Equal | `Deleted | `Added ]) (content : string) : Ui.t =
-  let format_line_number =
-    match diff_type with
-    | `Added -> W.string ~attr (Printf.sprintf "   %2d + " (their_num + 1))
-    | `Deleted -> W.string ~attr (Printf.sprintf "%2d    - " (mine_num + 1))
-    | `Equal ->
-        W.string ~attr:Notty.A.empty
-          (Printf.sprintf "%2d %2d   " (mine_num + 1) (their_num + 1))
-  in
-  let content_ui = W.string ~attr content in
-  Ui.hcat [ format_line_number; content_ui ]
-
-let render_line_diff (mine_num : int) (their_num : int)
-    (line : string Patch.line) : int * int * Ui.t =
-  match line with
-  | `Common s ->
-      ( mine_num + 1,
-        their_num + 1,
-        render_diff_line_str mine_num their_num Notty.A.empty `Equal s )
-  | `Mine s ->
-      ( mine_num + 1,
-        their_num,
-        render_diff_line_str mine_num their_num Notty.A.(fg red) `Deleted s )
-  | `Their s ->
-      ( mine_num,
-        their_num + 1,
-        render_diff_line_str mine_num their_num Notty.A.(fg green) `Added s )
-
-let render_hunk (hunk : string Patch.hunk) : Nottui.ui =
+let render_hunk (hunk : string Patch.hunk)
+    (rendering_mode : Types.rendering_mode) : Nottui.ui =
   let lines_ui =
     let rec process_lines mine_num their_num acc = function
       | [] -> List.rev acc
       | line :: rest ->
           let new_mine, new_their, ui =
-            render_line_diff mine_num their_num line
+            match line with
+            | `Common s ->
+                ( mine_num + 1,
+                  their_num + 1,
+                  match rendering_mode with
+                  | Types.Color ->
+                      W.string ~attr:Notty.A.(fg lightblue) ("  " ^ s)
+                  | Types.TextMarkers -> W.string ("   " ^ s) )
+            | `Mine s ->
+                ( mine_num + 1,
+                  their_num,
+                  match rendering_mode with
+                  | Types.Color -> W.string ~attr:Notty.A.(fg red) ("- " ^ s)
+                  | Types.TextMarkers -> W.string ("<- " ^ s ^ " /->") )
+            | `Their s ->
+                ( mine_num,
+                  their_num + 1,
+                  match rendering_mode with
+                  | Types.Color -> W.string ~attr:Notty.A.(fg green) ("+ " ^ s)
+                  | Types.TextMarkers -> W.string ("<+ " ^ s ^ " /+>") )
           in
           process_lines new_mine new_their (ui :: acc) rest
     in

@@ -19,7 +19,7 @@
    3  3   Actions speak louder than words. 
   @@ -11,2 +11,2 @@
    1    - The early bird catches the worm. 
-  Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation. Press 't' to toggle view mode.
+  Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation. Press 't' to toggle view mode. Pr
   $ dummy_terminal examples.diff n
   Operation 2 of 2, 3 hunks
   3 additions, 3 removals
@@ -40,6 +40,6 @@
   
   
   
-  Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation. Press 't' to toggle view mode.
+  Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation. Press 't' to toggle view mode. Pr
 
 

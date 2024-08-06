@@ -39,7 +39,8 @@ let split_and_align_hunk hunks : line list * line list =
 
 (* Normal Mode *)
 
-let ui_hunk_summary (hunk : string Patch.hunk) : Nottui.ui =
+let ui_hunk_summary (hunk : string Patch.hunk)
+    (rendering_mode : Types.rendering_mode) : Nottui.ui =
   let mine_info =
     if hunk.Patch.mine_len = 0 then "0,0"
     else Printf.sprintf "%d,%d" (hunk.Patch.mine_start + 1) hunk.Patch.mine_len
@@ -50,12 +51,22 @@ let ui_hunk_summary (hunk : string Patch.hunk) : Nottui.ui =
       Printf.sprintf "%d,%d" (hunk.Patch.their_start + 1) hunk.Patch.their_len
   in
   let mine_summary =
-    W.string ~attr:Notty.A.(fg red) (Printf.sprintf "-%s" mine_info)
+    match rendering_mode with
+    | Types.Color ->
+        W.string ~attr:Notty.A.(fg red) (Printf.sprintf "-%s" mine_info)
+    | Types.TextMarkers -> W.string (Printf.sprintf "-%s" mine_info)
   in
   let their_summary =
-    W.string ~attr:Notty.A.(fg green) (Printf.sprintf "+%s" their_info)
+    match rendering_mode with
+    | Types.Color ->
+        W.string ~attr:Notty.A.(fg green) (Printf.sprintf "+%s" their_info)
+    | Types.TextMarkers -> W.string (Printf.sprintf "+%s" their_info)
   in
-  let at_symbols = W.string ~attr:Notty.A.(fg lightblue) "@@" in
+  let at_symbols =
+    match rendering_mode with
+    | Types.Color -> W.string ~attr:Notty.A.(fg lightblue) "@@"
+    | Types.TextMarkers -> W.string "@@"
+  in
   Ui.hcat
     [
       at_symbols;
@@ -69,7 +80,7 @@ let ui_hunk_summary (hunk : string Patch.hunk) : Nottui.ui =
 
 let ui_unified_diff (hunk : string Patch.hunk)
     (rendering_mode : Types.rendering_mode) : Nottui.ui =
-  let hunk_summary = ui_hunk_summary hunk in
+  let hunk_summary = ui_hunk_summary hunk rendering_mode in
   let hunk_content =
     let blocks = Block.of_hunk hunk.Patch.lines in
     let single_line_changes =

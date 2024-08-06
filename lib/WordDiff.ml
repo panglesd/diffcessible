@@ -75,15 +75,18 @@ let word_to_ui word attr rendering_mode diff_type =
 let render_diff_line mine_num their_num attr diff_type words rendering_mode =
   let format_line_number =
     match diff_type with
-    | `Added -> W.string ~attr (Printf.sprintf "   %2d + " (their_num + 1))
-    | `Deleted -> W.string ~attr (Printf.sprintf "%2d    - " (mine_num + 1))
-    | `Equal ->
-        W.string ~attr:Notty.A.empty
-          (Printf.sprintf "%2d %2d   " (mine_num + 1) (their_num + 1))
+    | `Added -> Printf.sprintf "   %2d + " (their_num + 1)
+    | `Deleted -> Printf.sprintf "%2d    - " (mine_num + 1)
+    | `Equal -> Printf.sprintf "%2d %2d   " (mine_num + 1) (their_num + 1)
+  in
+  let line_number =
+    match rendering_mode with
+    | Types.Color -> W.string ~attr format_line_number
+    | Types.TextMarkers -> W.string format_line_number
   in
   Ui.hcat
     [
-      format_line_number;
+      line_number;
       Ui.hcat
         (List.map
            (function
@@ -103,27 +106,96 @@ let render_hunk_lines (hunk_lines : line_content Patch.line list)
         let new_mine, new_their, ui =
           match line with
           | `Common words ->
+              let attr =
+                match rendering_mode with
+                | Types.Color -> Notty.A.(fg lightblue)
+                | Types.TextMarkers -> Notty.A.empty
+              in
               ( mine_num + 1,
                 their_num + 1,
-                render_diff_line mine_num their_num Notty.A.empty `Equal words
+                render_diff_line mine_num their_num attr `Equal words
                   rendering_mode )
           | `Mine words ->
+              let attr =
+                match rendering_mode with
+                | Types.Color -> Notty.A.(fg red)
+                | Types.TextMarkers -> Notty.A.empty
+              in
               ( mine_num + 1,
                 their_num,
-                render_diff_line mine_num their_num
-                  Notty.A.(fg red)
-                  `Deleted words rendering_mode )
+                render_diff_line mine_num their_num attr `Deleted words
+                  rendering_mode )
           | `Their words ->
+              let attr =
+                match rendering_mode with
+                | Types.Color -> Notty.A.(fg green)
+                | Types.TextMarkers -> Notty.A.empty
+              in
               ( mine_num,
                 their_num + 1,
-                render_diff_line mine_num their_num
-                  Notty.A.(fg green)
-                  `Added words rendering_mode )
+                render_diff_line mine_num their_num attr `Added words
+                  rendering_mode )
         in
         process_lines new_mine new_their (ui :: acc) rest
   in
   let lines_ui = process_lines 0 0 [] hunk_lines in
   Ui.vcat lines_ui
+
+let render_diff_line_str (mine_num : int) (their_num : int) (attr : Notty.attr)
+    (diff_type : [ `Equal | `Deleted | `Added ]) (content : string)
+    (rendering_mode : Types.rendering_mode) : Ui.t =
+  let format_line_number =
+    match diff_type with
+    | `Added -> Printf.sprintf "   %2d " (their_num + 1)
+    | `Deleted -> Printf.sprintf "%2d    " (mine_num + 1)
+    | `Equal -> Printf.sprintf "%2d %2d " (mine_num + 1) (their_num + 1)
+  in
+  let line_number =
+    match rendering_mode with
+    | Types.Color -> W.string ~attr format_line_number
+    | Types.TextMarkers -> W.string format_line_number
+  in
+  let content_ui =
+    match rendering_mode with
+    | Types.Color ->
+        W.string ~attr
+          (match diff_type with
+          | `Added -> "+ " ^ content
+          | `Deleted -> "- " ^ content
+          | `Equal -> "  " ^ content)
+    | Types.TextMarkers -> (
+        match diff_type with
+        | `Equal -> W.string ("  " ^ content)
+        | `Deleted -> W.string ("- <-" ^ content ^ "/->")
+        | `Added -> W.string ("+ <+" ^ content ^ "/+>"))
+  in
+  Ui.hcat [ line_number; content_ui ]
+
+let render_line_diff (mine_num : int) (their_num : int)
+    (line : string Patch.line) (rendering_mode : Types.rendering_mode) :
+    int * int * Ui.t =
+  match line with
+  | `Common s ->
+      ( mine_num + 1,
+        their_num + 1,
+        render_diff_line_str mine_num their_num Notty.A.empty `Equal s
+          rendering_mode )
+  | `Mine s ->
+      ( mine_num + 1,
+        their_num,
+        render_diff_line_str mine_num their_num
+          (match rendering_mode with
+          | Types.Color -> Notty.A.(fg red)
+          | Types.TextMarkers -> Notty.A.empty)
+          `Deleted s rendering_mode )
+  | `Their s ->
+      ( mine_num,
+        their_num + 1,
+        render_diff_line_str mine_num their_num
+          (match rendering_mode with
+          | Types.Color -> Notty.A.(fg green)
+          | Types.TextMarkers -> Notty.A.empty)
+          `Added s rendering_mode )
 
 let render_hunk (hunk : string Patch.hunk)
     (rendering_mode : Types.rendering_mode) : Nottui.ui =
@@ -132,30 +204,10 @@ let render_hunk (hunk : string Patch.hunk)
       | [] -> List.rev acc
       | line :: rest ->
           let new_mine, new_their, ui =
-            match line with
-            | `Common s ->
-                ( mine_num + 1,
-                  their_num + 1,
-                  match rendering_mode with
-                  | Types.Color ->
-                      W.string ~attr:Notty.A.(fg lightblue) ("  " ^ s)
-                  | Types.TextMarkers -> W.string ("   " ^ s) )
-            | `Mine s ->
-                ( mine_num + 1,
-                  their_num,
-                  match rendering_mode with
-                  | Types.Color -> W.string ~attr:Notty.A.(fg red) ("- " ^ s)
-                  | Types.TextMarkers -> W.string ("<- " ^ s ^ " /->") )
-            | `Their s ->
-                ( mine_num,
-                  their_num + 1,
-                  match rendering_mode with
-                  | Types.Color -> W.string ~attr:Notty.A.(fg green) ("+ " ^ s)
-                  | Types.TextMarkers -> W.string ("<+ " ^ s ^ " /+>") )
+            render_line_diff mine_num their_num line rendering_mode
           in
           process_lines new_mine new_their (ui :: acc) rest
     in
-    process_lines hunk.Patch.mine_start hunk.Patch.their_start []
-      hunk.Patch.lines
+    process_lines 0 0 [] hunk.Patch.lines
   in
   Ui.vcat lines_ui

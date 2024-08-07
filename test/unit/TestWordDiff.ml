@@ -12,8 +12,8 @@ let test_lcs_4 = ([], [], []) (* Empty lists *)
 
 let test_lcs_5 =
   ([ "a"; "a"; "b"; "b"; "c" ], [ "a"; "b"; "c"; "c" ], [ "a"; "b"; "c" ])
-(* Repeating elements *)
 
+(* Repeating elements *)
 let test_lcs_6 = ([ "a"; "b"; "c" ], [ "d"; "e"; "f" ], [])
 
 (* All different, same length *)
@@ -23,57 +23,47 @@ let test_lcs_8 = ([ "a"; "b"; "c" ], [], []) (* One non-empty, one empty *)
 let test_diff_1 =
   ( "abc def",
     "abc ghi",
-    ( [ WordDiff.Unchanged "abc"; WordDiff.Changed "def" ],
-      [ WordDiff.Unchanged "abc"; WordDiff.Changed "ghi" ] ) )
+    ( [ Types.Unchanged "abc"; Types.Changed "def" ],
+      [ Types.Unchanged "abc"; Types.Changed "ghi" ] ) )
 
 let test_diff_2 =
   ( "",
     "abc def",
-    ([ WordDiff.Changed "" ], [ WordDiff.Changed "abc"; WordDiff.Changed "def" ])
-  )
+    ([ Types.Changed "" ], [ Types.Changed "abc"; Types.Changed "def" ]) )
 
 let test_diff_3 =
   ( "abc def",
     "",
-    ([ WordDiff.Changed "abc"; WordDiff.Changed "def" ], [ WordDiff.Changed "" ])
-  )
+    ([ Types.Changed "abc"; Types.Changed "def" ], [ Types.Changed "" ]) )
 
 let test_diff_4 =
   ( "abc def ghi",
     "abc def jkl",
-    ( [
-        WordDiff.Unchanged "abc";
-        WordDiff.Unchanged "def";
-        WordDiff.Changed "ghi";
-      ],
-      [
-        WordDiff.Unchanged "abc";
-        WordDiff.Unchanged "def";
-        WordDiff.Changed "jkl";
-      ] ) )
+    ( [ Types.Unchanged "abc"; Types.Unchanged "def"; Types.Changed "ghi" ],
+      [ Types.Unchanged "abc"; Types.Unchanged "def"; Types.Changed "jkl" ] ) )
 
 let test_diff_5 =
   ( "  abc  def  ",
     " abc def ",
     ( [
-        WordDiff.Unchanged "";
-        WordDiff.Changed "";
-        WordDiff.Unchanged "abc";
-        WordDiff.Changed "";
-        WordDiff.Unchanged "def";
-        WordDiff.Unchanged "";
-        WordDiff.Changed "";
+        Types.Unchanged "";
+        Types.Changed "";
+        Types.Unchanged "abc";
+        Types.Changed "";
+        Types.Unchanged "def";
+        Types.Unchanged "";
+        Types.Changed "";
       ],
       [
-        WordDiff.Unchanged "";
-        WordDiff.Unchanged "abc";
-        WordDiff.Unchanged "def";
-        WordDiff.Unchanged "";
+        Types.Unchanged "";
+        Types.Unchanged "abc";
+        Types.Unchanged "def";
+        Types.Unchanged "";
       ] ) )
 
 let string_of_word = function
-  | WordDiff.Unchanged s -> Printf.sprintf "Unchanged %S" s
-  | WordDiff.Changed s -> Printf.sprintf "Changed %S" s
+  | Types.Unchanged s -> Printf.sprintf "Unchanged %S" s
+  | Types.Changed s -> Printf.sprintf "Changed %S" s
 
 let string_of_line_content lc =
   "[" ^ String.concat "; " (List.map string_of_word lc) ^ "]"

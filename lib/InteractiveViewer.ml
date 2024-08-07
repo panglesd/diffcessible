@@ -78,12 +78,12 @@ let view (patches : string Patch.t list) =
                      `Handled
                  | `ASCII 'n', [] ->
                      Lwd.set z_patches_var
-                       (PatchNavigation.navigate PatchNavigation.Next
+                       (PatchNavigation.navigate Types.Next
                           (Lwd.peek z_patches_var));
                      `Handled
                  | `ASCII 'p', [] ->
                      Lwd.set z_patches_var
-                       (PatchNavigation.navigate PatchNavigation.Prev
+                       (PatchNavigation.navigate Types.Prev
                           (Lwd.peek z_patches_var));
                      `Handled
                  | `ASCII 'h', [] ->

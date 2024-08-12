@@ -27,16 +27,16 @@ This is a cram test for the new executable.
   3 additions, 1 removal
   Modification of bin/main.ml
   @@ -1,7 +1,9 @@
-    open Diffcessible
-    
-    let main () =
-  -   Interactive_viewer.start ()
-  +   let s = In_channel.input_all In_channel.stdin in
-  +   let patch = Patch.to_diffs s in
-  +   Interactive_viewer.start patch
-    
-    open Cmdliner
-    
+   1  1   open Diffcessible
+   2  2   
+   3  3   let main () =
+   4    -   Interactive_viewer.start ()
+      4 +   let s = In_channel.input_all In_channel.stdin in
+      5 +   let patch = Patch.to_diffs s in
+      6 +   Interactive_viewer.start patch
+   5  7   
+   6  8   open Cmdliner
+   7  9   
   
   
   
@@ -90,9 +90,9 @@ This is a cram test for the new executable.
   2 additions, 1 removal
   Modification of file.txt
   @@ -2,1 +2,2 @@
-  - Hi everyone!
-  + Hello World!
-  + This is the diffcessible project.
+   1    - Hi everyone!
+      1 + Hello World!
+      2 + This is the diffcessible project.
   
   
   
@@ -111,9 +111,9 @@ This is a cram test for the new executable.
   2 additions, 1 removal
   Modification of file.txt
   @@ -3,1 +5,2 @@
-  - This file starts at line 3.
-  + This file starts at line 5.
-  + This is the second test case in this file.
+   1    - This file starts at line 3.
+      1 + This file starts at line 5.
+      2 + This is the second test case in this file.
   
   
   

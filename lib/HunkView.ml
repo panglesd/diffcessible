@@ -4,6 +4,130 @@ module W = Nottui_widgets
 (* Types *)
 
 type line = Change of string | Common of string | Empty
+(* Rendering Functions *)
+
+let word_to_ui word attr = W.string ~attr (word ^ " ")
+
+let render_diff_line mine_num their_num attr diff_type words rendering_mode =
+  let format_line_number =
+    match diff_type with
+    | `Added -> W.string ~attr (Printf.sprintf "   %2d + " (their_num + 1))
+    | `Deleted -> W.string ~attr (Printf.sprintf "%2d    - " (mine_num + 1))
+    | `Equal ->
+        W.string ~attr:Notty.A.empty
+          (Printf.sprintf "%2d %2d   " (mine_num + 1) (their_num + 1))
+  in
+  let content =
+    Ui.hcat
+      (List.map
+         (function
+           | WordDiff.Changed word
+             when diff_type = `Deleted || diff_type = `Added -> (
+               match rendering_mode with
+               | Types.Color -> word_to_ui word attr
+               | Types.TextMarkers ->
+                   let tag = if diff_type = `Deleted then "<-" else "<+" in
+                   Ui.hcat
+                     [
+                       W.string tag;
+                       word_to_ui word Notty.A.empty;
+                       W.string "->";
+                     ])
+           | WordDiff.Unchanged word -> word_to_ui word Notty.A.empty
+           | _ -> Ui.empty)
+         words)
+  in
+  Ui.hcat [ format_line_number; content ]
+
+let render_hunk_lines (hunk_lines : WordDiff.line_content Patch.line list)
+    (rendering_mode : Types.rendering_mode) : Nottui.ui =
+  let rec process_lines mine_num their_num acc = function
+    | [] -> List.rev acc
+    | line :: rest ->
+        let new_mine, new_their, ui =
+          match line with
+          | `Common words ->
+              ( mine_num + 1,
+                their_num + 1,
+                render_diff_line mine_num their_num Notty.A.empty `Equal words
+                  rendering_mode )
+          | `Mine words ->
+              ( mine_num + 1,
+                their_num,
+                render_diff_line mine_num their_num
+                  Notty.A.(fg red)
+                  `Deleted words rendering_mode )
+          | `Their words ->
+              ( mine_num,
+                their_num + 1,
+                render_diff_line mine_num their_num
+                  Notty.A.(fg green)
+                  `Added words rendering_mode )
+        in
+        process_lines new_mine new_their (ui :: acc) rest
+  in
+  let lines_ui = process_lines 0 0 [] hunk_lines in
+  Ui.vcat lines_ui
+
+let render_diff_line_str (mine_num : int) (their_num : int) (attr : Notty.attr)
+    (diff_type : [ `Equal | `Deleted | `Added ]) (content : string)
+    (rendering_mode : Types.rendering_mode) : Ui.t =
+  let format_line_number =
+    match diff_type with
+    | `Added -> W.string ~attr (Printf.sprintf "   %2d + " (their_num + 1))
+    | `Deleted -> W.string ~attr (Printf.sprintf "%2d    - " (mine_num + 1))
+    | `Equal ->
+        W.string ~attr:Notty.A.empty
+          (Printf.sprintf "%2d %2d   " (mine_num + 1) (their_num + 1))
+  in
+  let content_ui =
+    match rendering_mode with
+    | Types.Color -> W.string ~attr content
+    | Types.TextMarkers -> (
+        match diff_type with
+        | `Added -> Ui.hcat [ W.string "<+"; W.string content; W.string "->" ]
+        | `Deleted -> Ui.hcat [ W.string "<-"; W.string content; W.string "->" ]
+        | `Equal -> W.string content)
+  in
+  Ui.hcat [ format_line_number; content_ui ]
+
+let render_line_diff (mine_num : int) (their_num : int)
+    (line : string Patch.line) (rendering_mode : Types.rendering_mode) :
+    int * int * Ui.t =
+  match line with
+  | `Common s ->
+      ( mine_num + 1,
+        their_num + 1,
+        render_diff_line_str mine_num their_num Notty.A.empty `Equal s
+          rendering_mode )
+  | `Mine s ->
+      ( mine_num + 1,
+        their_num,
+        render_diff_line_str mine_num their_num
+          Notty.A.(fg red)
+          `Deleted s rendering_mode )
+  | `Their s ->
+      ( mine_num,
+        their_num + 1,
+        render_diff_line_str mine_num their_num
+          Notty.A.(fg green)
+          `Added s rendering_mode )
+
+let render_hunk (hunk : string Patch.hunk)
+    (rendering_mode : Types.rendering_mode) : Nottui.ui =
+  let lines_ui =
+    let rec process_lines mine_num their_num acc = function
+      | [] -> List.rev acc
+      | line :: rest ->
+          let new_mine, new_their, ui =
+            render_line_diff mine_num their_num line rendering_mode
+          in
+          process_lines new_mine new_their (ui :: acc) rest
+    in
+    process_lines hunk.Patch.mine_start hunk.Patch.their_start []
+      hunk.Patch.lines
+  in
+  Ui.vcat lines_ui
 
 (* Utility Functions *)
 
@@ -94,8 +218,8 @@ let ui_unified_diff (hunk : string Patch.hunk)
     if single_line_changes then
       let word_diff_blocks = List.map WordDiff.compute blocks in
       let word_diff_lines = Block.to_hunk word_diff_blocks in
-      WordDiff.render_hunk_lines word_diff_lines rendering_mode
-    else WordDiff.render_hunk hunk rendering_mode
+      render_hunk_lines word_diff_lines rendering_mode
+    else render_hunk hunk rendering_mode
   in
   Ui.vcat [ hunk_summary; hunk_content ]
 

@@ -1,2 +1,6 @@
-let navigate (dir : Types.navigation_direction) =
-  match dir with Types.Prev -> Zipper.prev | Types.Next -> Zipper.next
+module W = Nottui_widgets
+
+type direction = Prev | Next
+
+let navigate (dir : direction) =
+  match dir with Prev -> Zipper.prev | Next -> Zipper.next

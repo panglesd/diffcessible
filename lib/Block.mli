@@ -1,6 +1,8 @@
+type block_origin = Mine | Their | None
+
 type 'a t =
   | Common of 'a
-  | Changed of { mine : 'a list; their : 'a list; order : Types.block_origin }
+  | Changed of { mine : 'a list; their : 'a list; order : block_origin }
 
 val of_hunk : 'a Patch.line list -> 'a t list
 

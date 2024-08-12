@@ -1,9 +1,10 @@
+type block_origin = Mine | Their | None
+
 type 'a t =
   | Common of 'a
-  | Changed of { mine : 'a list; their : 'a list; order : Types.block_origin }
+  | Changed of { mine : 'a list; their : 'a list; order : block_origin }
 
-let rec first_change_order (hunk_lines : 'a Patch.line list) :
-    Types.block_origin =
+let rec first_change_order (hunk_lines : 'a Patch.line list) : block_origin =
   match hunk_lines with
   | [] -> None
   | `Common _ :: rest -> first_change_order rest
@@ -53,6 +54,6 @@ let to_hunk (blocks : 'a t list) : 'a Patch.line list =
       | Changed { mine; their; order } ->
           let mine_lines = List.map (fun x -> `Mine x) mine in
           let their_lines = List.map (fun x -> `Their x) their in
-          if order = Types.Mine then mine_lines @ their_lines
+          if order = Mine then mine_lines @ their_lines
           else their_lines @ mine_lines)
     blocks

@@ -21,7 +21,7 @@ This is a cram test for the new executable.
   
   
   
-  Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation. Press 't' to toggle view mode. Pr
+  Type 'h' for help, 'q' to quit, 'n' for next, 'p' for previous, 't' to toggle view mode, 'r' to toggle render mode.
   $ dummy_terminal example.diff n
   Operation 2 of 14, 1 hunk
   3 additions, 1 removal
@@ -42,7 +42,7 @@ This is a cram test for the new executable.
   
   
   
-  Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation. Press 't' to toggle view mode. Pr
+  Type 'h' for help, 'q' to quit, 'n' for next, 'p' for previous, 't' to toggle view mode, 'r' to toggle render mode.
   $ dummy_terminal example.diff n n
   Operation 3 of 14, 1 hunk
   1 addition, 1 removal
@@ -63,7 +63,7 @@ This is a cram test for the new executable.
   
   
   
-  Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation. Press 't' to toggle view mode. Pr
+  Type 'h' for help, 'q' to quit, 'n' for next, 'p' for previous, 't' to toggle view mode, 'r' to toggle render mode.
   $ dummy_terminal example.diff h 
   Help Panel:
   
@@ -90,9 +90,9 @@ This is a cram test for the new executable.
   2 additions, 1 removal
   Modification of file.txt
   @@ -2,1 +2,2 @@
-   1    - Hi everyone!
-      1 + Hello World!
-      2 + This is the diffcessible project.
+   2    - Hi everyone!
+      2 + Hello World!
+      3 + This is the diffcessible project.
   
   
   
@@ -105,15 +105,15 @@ This is a cram test for the new executable.
   
   
   
-  Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation. Press 't' to toggle view mode. Pr
+  Type 'h' for help, 'q' to quit, 'n' for next, 'p' for previous, 't' to toggle view mode, 'r' to toggle render mode.
   $ dummy_terminal more-examples.diff n
   Operation 2 of 2, 1 hunk
   2 additions, 1 removal
   Modification of file.txt
   @@ -3,1 +5,2 @@
-   1    - This file starts at line 3.
-      1 + This file starts at line 5.
-      2 + This is the second test case in this file.
+   3    - This file starts at line 3.
+      5 + This file starts at line 5.
+      6 + This is the second test case in this file.
   
   
   
@@ -126,7 +126,7 @@ This is a cram test for the new executable.
   
   
   
-  Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation. Press 't' to toggle view mode. Pr
+  Type 'h' for help, 'q' to quit, 'n' for next, 'p' for previous, 't' to toggle view mode, 'r' to toggle render mode.
 
 
 
@@ -154,7 +154,7 @@ This is a cram test for the new executable.
   
   
   
-  Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation. Press 't' to toggle view mode. Pr
+  Type 'h' for help, 'q' to quit, 'n' for next, 'p' for previous, 't' to toggle view mode, 'r' to toggle render mode.
 
   $ dummy_terminal more-examples.diff n t
   Operation 2 of 2, 1 hunk
@@ -176,7 +176,7 @@ This is a cram test for the new executable.
   
   
   
-  Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation. Press 't' to toggle view mode. Pr
+  Type 'h' for help, 'q' to quit, 'n' for next, 'p' for previous, 't' to toggle view mode, 'r' to toggle render mode.
 
   $ dummy_terminal example.diff n n t
   Operation 3 of 14, 1 hunk
@@ -198,7 +198,7 @@ This is a cram test for the new executable.
   
   
   
-  Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation. Press 't' to toggle view mode. Pr
+  Type 'h' for help, 'q' to quit, 'n' for next, 'p' for previous, 't' to toggle view mode, 'r' to toggle render mode.
 
   $ dummy_terminal example.diff n n n t
   Operation 4 of 14, 1 hunk
@@ -220,7 +220,7 @@ This is a cram test for the new executable.
    13   let quit = Lwd.var false                                                6   let quit = Lwd.var false
    14 - let counter = Lwd.var 0                                                 7 + let string_of_operation = Format.asprintf "%a" (Patch.pp_operation ~
    15 - let counter_d = Lwd.get counter                                               
-  Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation. Press 't' to toggle view mode. Pr
+  Type 'h' for help, 'q' to quit, 'n' for next, 'p' for previous, 't' to toggle view mode, 'r' to toggle render mode.
 
 
   $ dummy_terminal example.diff n n n n t
@@ -243,7 +243,7 @@ This is a cram test for the new executable.
   
   
   
-  Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation. Press 't' to toggle view mode. Pr
+  Type 'h' for help, 'q' to quit, 'n' for next, 'p' for previous, 't' to toggle view mode, 'r' to toggle render mode.
 
 
   $ dummy_terminal example.diff n n n n n t
@@ -266,7 +266,7 @@ This is a cram test for the new executable.
   
   
   
-  Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation. Press 't' to toggle view mode. Pr
+  Type 'h' for help, 'q' to quit, 'n' for next, 'p' for previous, 't' to toggle view mode, 'r' to toggle render mode.
 
   $ dummy_terminal example.diff n n n n n n n t
   Operation 8 of 14, 1 hunk
@@ -288,7 +288,7 @@ This is a cram test for the new executable.
   
   
   
-  Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation. Press 't' to toggle view mode. Pr
+  Type 'h' for help, 'q' to quit, 'n' for next, 'p' for previous, 't' to toggle view mode, 'r' to toggle render mode.
 
   $ dummy_terminal example.diff n n n n n n n n n t
   Operation 10 of 14, 1 hunk
@@ -310,7 +310,7 @@ This is a cram test for the new executable.
   
   
   
-  Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation. Press 't' to toggle view mode. Pr
+  Type 'h' for help, 'q' to quit, 'n' for next, 'p' for previous, 't' to toggle view mode, 'r' to toggle render mode.
 
   $ dummy_terminal example.diff n n n n n n n n n n n n t
   Operation 13 of 14, 1 hunk
@@ -332,7 +332,7 @@ This is a cram test for the new executable.
   
   
   
-  Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation. Press 't' to toggle view mode. Pr
+  Type 'h' for help, 'q' to quit, 'n' for next, 'p' for previous, 't' to toggle view mode, 'r' to toggle render mode.
 
   $ dummy_terminal example.diff n n n n n n n n n n n n n n n t
   Operation 14 of 14, 1 hunk
@@ -354,7 +354,7 @@ This is a cram test for the new executable.
   
   
   
-  Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation. Press 't' to toggle view mode. Pr
+  Type 'h' for help, 'q' to quit, 'n' for next, 'p' for previous, 't' to toggle view mode, 'r' to toggle render mode.
 
 
   $ dummy_terminal example.diff n n n n n n n n n n n n n n n n t
@@ -377,7 +377,7 @@ This is a cram test for the new executable.
   
   
   
-  Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation. Press 't' to toggle view mode. Pr
+  Type 'h' for help, 'q' to quit, 'n' for next, 'p' for previous, 't' to toggle view mode, 'r' to toggle render mode.
 
 
 

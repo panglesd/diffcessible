@@ -5,7 +5,7 @@ open Lwd_infix
 type view_mode = SideBySide | Normal
 
 let view_mode : view_mode Lwd.var = Lwd.var Normal
-let render_mode : Types.rendering_mode Lwd.var = Lwd.var Types.Color
+let render_mode : HunkView.rendering_mode Lwd.var = Lwd.var HunkView.Color
 
 let toggle_view_mode () : unit =
   match Lwd.peek view_mode with
@@ -14,8 +14,8 @@ let toggle_view_mode () : unit =
 
 let toggle_render_mode () : unit =
   match Lwd.peek render_mode with
-  | Types.Color -> Lwd.set render_mode Types.TextMarkers
-  | Types.TextMarkers -> Lwd.set render_mode Types.Color
+  | HunkView.Color -> Lwd.set render_mode HunkView.TextMarkers
+  | HunkView.TextMarkers -> Lwd.set render_mode HunkView.Color
 
 let help_visible = Lwd.var false
 let quit = Lwd.var false

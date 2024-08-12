@@ -17,6 +17,32 @@ let lcs xs' ys' =
   done;
   a.(0).(0)
 
+let edit_distance (type a) (compare : a -> a -> bool) (s : a array)
+    (t : a array) : int =
+  let memo = Hashtbl.create ((Array.length s + 1) * (Array.length t + 1)) in
+
+  let rec edit_distance_helper i j =
+    match (i, j) with
+    | 0, x | x, 0 -> x
+    | i, j -> (
+        match Hashtbl.find_opt memo (i, j) with
+        | Some result -> result
+        | None ->
+            let result =
+              let cost_to_drop_both =
+                if compare s.(i - 1) t.(j - 1) then 0 else 1
+              in
+              min
+                (min
+                   (edit_distance_helper (i - 1) j + 1)
+                   (edit_distance_helper i (j - 1) + 1))
+                (edit_distance_helper (i - 1) (j - 1) + cost_to_drop_both)
+            in
+            Hashtbl.add memo (i, j) result;
+            result)
+  in
+  edit_distance_helper (Array.length s) (Array.length t)
+
 let diff_words (s1 : string) (s2 : string) : line_content * line_content =
   let words1 = Array.to_list (string_to_words s1) in
   let words2 = Array.to_list (string_to_words s2) in

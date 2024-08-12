@@ -1,11 +1,14 @@
 open Nottui
 module W = Nottui_widgets
 
-(* Constants and Formatting Strings *)
-let added_marker = "+"
-let removed_marker = "-"
-let unchanged_marker = " "
-let empty_line_content = "        "
+(* Constants and Formatting Functions *)
+let added_marker (content : Ui.t) : Ui.t =
+  Ui.hcat [ W.string "+" ~attr:Notty.A.(fg green); content ]
+
+let removed_marker (content : Ui.t) : Ui.t =
+  Ui.hcat [ W.string "-" ~attr:Notty.A.(fg red); content ]
+
+let unchanged_marker (content : Ui.t) : Ui.t = Ui.hcat [ W.string " "; content ]
 
 (* Types *)
 
@@ -50,12 +53,6 @@ let style_text (text : string) (attr : Notty.attr) (mode : rendering_mode) :
     Ui.t =
   match mode with Color -> W.string ~attr text | TextMarkers -> W.string text
 
-let style_diff_line (prefix : string) (text : string) (mode : rendering_mode) :
-    string =
-  match mode with
-  | Color -> text
-  | TextMarkers -> Printf.sprintf "%s%s" prefix text
-
 let style_word (word : string)
     (change_type : [ `Added | `Removed | `Unchanged ]) (mode : rendering_mode) :
     Ui.t =
@@ -64,10 +61,9 @@ let style_word (word : string)
     | Color, `Added -> W.string ~attr:Notty.A.(fg green) word
     | Color, `Removed -> W.string ~attr:Notty.A.(fg red) word
     | Color, `Unchanged -> W.string word
-    | TextMarkers, `Added -> Ui.hcat [ W.string added_marker; W.string word ]
-    | TextMarkers, `Removed ->
-        Ui.hcat [ W.string removed_marker; W.string word ]
-    | TextMarkers, `Unchanged -> W.string word
+    | TextMarkers, `Added -> added_marker (W.string word)
+    | TextMarkers, `Removed -> removed_marker (W.string word)
+    | TextMarkers, `Unchanged -> unchanged_marker (W.string word)
   in
   Ui.hcat [ styled_word; W.string " " ]
 
@@ -82,16 +78,10 @@ let render_hunk_summary (hunk : string Patch.hunk) (mode : rendering_mode) :
     Printf.sprintf "%d,%d" (hunk.Patch.their_start + 1) hunk.Patch.their_len
   in
   let mine_summary =
-    style_text
-      (Printf.sprintf "%s%s" removed_marker mine_info)
-      Notty.A.(fg red)
-      mode
+    style_text (Printf.sprintf "-%s" mine_info) Notty.A.(fg red) mode
   in
   let their_summary =
-    style_text
-      (Printf.sprintf "%s%s" added_marker their_info)
-      Notty.A.(fg green)
-      mode
+    style_text (Printf.sprintf "+%s" their_info) Notty.A.(fg green) mode
   in
   let at_symbols = style_text "@@" Notty.A.(fg lightblue) mode in
   Ui.hcat
@@ -126,8 +116,14 @@ let render_diff_line (mine_num : int) (their_num : int)
     (diff_type : [ `Added | `Removed | `Unchanged ])
     (content : WordDiff.word list) (mode : rendering_mode) : Ui.t =
   let line_number = render_line_number mine_num their_num diff_type in
-  let content = render_word_diff content diff_type mode in
-  Ui.hcat [ line_number; content ]
+  let content_ui = render_word_diff content diff_type mode in
+  let marker =
+    match diff_type with
+    | `Added -> added_marker
+    | `Removed -> removed_marker
+    | `Unchanged -> unchanged_marker
+  in
+  Ui.hcat [ line_number; marker content_ui ]
 
 let render_hunk_lines (hunk_lines : WordDiff.line_content Patch.line list)
     (mode : rendering_mode) : Ui.t =
@@ -155,28 +151,37 @@ let render_hunk_lines (hunk_lines : WordDiff.line_content Patch.line list)
 
 let render_hunk (hunk : string Patch.hunk) (mode : rendering_mode) : Ui.t =
   let content =
-    let blocks = Block.of_hunk hunk.Patch.lines in
-    let word_diff_blocks = List.map WordDiff.compute blocks in
-    let word_diff_lines = Block.to_hunk word_diff_blocks in
-    render_hunk_lines word_diff_lines mode
+    let blocks =
+      Block.of_hunk hunk.Patch.lines
+      |> List.map WordDiff.compute |> Block.to_hunk
+    in
+    render_hunk_lines blocks mode
   in
   Ui.vcat [ content ]
 
 (* Helper functions for side-by-side view *)
 
-let lines_with_numbers (lines : line list) (attr : Notty.attr) (prefix : string)
-    (mode : rendering_mode) : Ui.t list =
+let lines_with_numbers (lines : line list) (attr_change : Notty.attr)
+    (marker : Ui.t -> Ui.t) (mode : rendering_mode) : Ui.t list =
   let rec process_lines line_num acc = function
     | [] -> List.rev acc
     | line :: rest ->
-        let content, next_num =
+        let content, attr, next_num =
           match line with
-          | Common s -> (style_diff_line unchanged_marker s mode, line_num + 1)
-          | Change s -> (style_diff_line prefix s mode, line_num + 1)
-          | Empty -> (empty_line_content, line_num)
+          | Common s ->
+              let content = Printf.sprintf "%3d   %s" line_num s in
+              (content, Notty.A.empty, line_num + 1)
+          | Change s ->
+              let content = Printf.sprintf "%3d %s" line_num s in
+              (content, attr_change, line_num + 1)
+          | Empty ->
+              let content = Printf.sprintf "      " in
+              (content, Notty.A.empty, line_num)
         in
         let line_ui =
-          W.string ~attr (Printf.sprintf "%3d %s" line_num content)
+          match mode with
+          | Color -> W.string ~attr content
+          | TextMarkers -> marker (W.string content)
         in
         process_lines next_num (line_ui :: acc) rest
   in
@@ -184,9 +189,7 @@ let lines_with_numbers (lines : line list) (attr : Notty.attr) (prefix : string)
 
 let create_summary (start_line_num : int) (hunk_length : int)
     (attr : Notty.attr) (change_type : [ `Add | `Remove ]) : Ui.t =
-  let sign =
-    match change_type with `Add -> added_marker | `Remove -> removed_marker
-  in
+  let sign = match change_type with `Add -> "+" | `Remove -> "-" in
   let summary =
     Printf.sprintf "@@ %s%d,%d @@" sign start_line_num hunk_length
   in
@@ -225,8 +228,8 @@ let current_hunks_side_by_side (z_patches : string Patch.t Zipper.t)
   let p = Zipper.get_focus z_patches in
   let render_side_by_side hunk =
     let mine_lines, their_lines = split_and_align_hunk hunk.Patch.lines in
-    let render_lines lines prefix attr =
-      lines_with_numbers lines attr prefix mode
+    let render_lines lines marker attr =
+      lines_with_numbers lines attr marker mode
     in
     let content_mine =
       render_lines mine_lines removed_marker Notty.A.(fg red)

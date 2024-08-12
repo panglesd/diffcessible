@@ -23,6 +23,8 @@ let quit = Lwd.var false
 let toggle_help_visibility () =
   Lwd.set help_visible (not (Lwd.peek help_visible))
 
+let help_string = "[h]elp [q]uit [n/p]avigate [t]oggle view [r]ender mode"
+
 let view (patches : string Patch.t list) =
   let z_patches_var : string Patch.t Zipper.t Lwd.var =
     match Zipper.zipper_of_list patches with
@@ -95,10 +97,7 @@ let view (patches : string Patch.t list) =
                      toggle_render_mode ();
                      `Handled
                  | _ -> `Unhandled)
-               (W.string
-                  "Type 'h' for help, 'q' to quit, 'n' for next, 'p' for \
-                   previous, 't' to toggle view mode, 'r' to toggle render \
-                   mode.");
+               (W.string help_string);
         ]
   in
   Lwd.return ui

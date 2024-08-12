@@ -1,6 +1,12 @@
 open Nottui
 module W = Nottui_widgets
 
+(* Constants and Formatting Strings *)
+let added_marker = "+"
+let removed_marker = "-"
+let unchanged_marker = " "
+let empty_line_content = "        "
+
 (* Types *)
 
 type line = Change of string | Common of string | Empty
@@ -58,8 +64,9 @@ let style_word (word : string)
     | Color, `Added -> W.string ~attr:Notty.A.(fg green) word
     | Color, `Removed -> W.string ~attr:Notty.A.(fg red) word
     | Color, `Unchanged -> W.string word
-    | TextMarkers, `Added -> Ui.hcat [ W.string "+"; W.string word ]
-    | TextMarkers, `Removed -> Ui.hcat [ W.string "-"; W.string word ]
+    | TextMarkers, `Added -> Ui.hcat [ W.string added_marker; W.string word ]
+    | TextMarkers, `Removed ->
+        Ui.hcat [ W.string removed_marker; W.string word ]
     | TextMarkers, `Unchanged -> W.string word
   in
   Ui.hcat [ styled_word; W.string " " ]
@@ -75,10 +82,16 @@ let render_hunk_summary (hunk : string Patch.hunk) (mode : rendering_mode) :
     Printf.sprintf "%d,%d" (hunk.Patch.their_start + 1) hunk.Patch.their_len
   in
   let mine_summary =
-    style_text (Printf.sprintf "-%s" mine_info) Notty.A.(fg red) mode
+    style_text
+      (Printf.sprintf "%s%s" removed_marker mine_info)
+      Notty.A.(fg red)
+      mode
   in
   let their_summary =
-    style_text (Printf.sprintf "+%s" their_info) Notty.A.(fg green) mode
+    style_text
+      (Printf.sprintf "%s%s" added_marker their_info)
+      Notty.A.(fg green)
+      mode
   in
   let at_symbols = style_text "@@" Notty.A.(fg lightblue) mode in
   Ui.hcat
@@ -158,9 +171,9 @@ let lines_with_numbers (lines : line list) (attr : Notty.attr) (prefix : string)
     | line :: rest ->
         let content, next_num =
           match line with
-          | Common s -> (style_diff_line " " s mode, line_num + 1)
+          | Common s -> (style_diff_line unchanged_marker s mode, line_num + 1)
           | Change s -> (style_diff_line prefix s mode, line_num + 1)
-          | Empty -> ("        ", line_num)
+          | Empty -> (empty_line_content, line_num)
         in
         let line_ui =
           W.string ~attr (Printf.sprintf "%3d %s" line_num content)
@@ -171,7 +184,9 @@ let lines_with_numbers (lines : line list) (attr : Notty.attr) (prefix : string)
 
 let create_summary (start_line_num : int) (hunk_length : int)
     (attr : Notty.attr) (change_type : [ `Add | `Remove ]) : Ui.t =
-  let sign = match change_type with `Add -> "+" | `Remove -> "-" in
+  let sign =
+    match change_type with `Add -> added_marker | `Remove -> removed_marker
+  in
   let summary =
     Printf.sprintf "@@ %s%d,%d @@" sign start_line_num hunk_length
   in
@@ -179,11 +194,6 @@ let create_summary (start_line_num : int) (hunk_length : int)
 
 (* Main View Functions *)
 
-(* let current_hunks (z_patches : string Patch.t Zipper.t) (mode : rendering_mode) *)
-(*     : Ui.t = *)
-(*   let p = Zipper.get_focus z_patches in *)
-(*   let hunks = List.map (fun hunk -> render_hunk hunk mode) p.Patch.hunks in *)
-(*   Ui.vcat hunks *)
 let ui_unified_diff (hunk : string Patch.hunk) (mode : rendering_mode) : Ui.t =
   let hunk_summary = render_hunk_summary hunk mode in
   let hunk_content =
@@ -218,8 +228,12 @@ let current_hunks_side_by_side (z_patches : string Patch.t Zipper.t)
     let render_lines lines prefix attr =
       lines_with_numbers lines attr prefix mode
     in
-    let content_mine = render_lines mine_lines "-" Notty.A.(fg red) in
-    let content_their = render_lines their_lines "+" Notty.A.(fg green) in
+    let content_mine =
+      render_lines mine_lines removed_marker Notty.A.(fg red)
+    in
+    let content_their =
+      render_lines their_lines added_marker Notty.A.(fg green)
+    in
     let summary_mine =
       create_summary
         (hunk.Patch.mine_start + 1)

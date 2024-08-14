@@ -1,11 +1,7 @@
 type word = Unchanged of string | Changed of string
 type line_content = word list
 
-let string_arr_to_words s = Array.of_list (String.split_on_char ' ' s)
-
-let string_to_words s =
-  s |> String.trim |> String.split_on_char ' ' |> List.filter (fun s -> s <> "")
-
+let string_to_words s = Array.of_list (String.split_on_char ' ' s)
 let longest xs ys = if List.length xs > List.length ys then xs else ys
 
 let lcs xs' ys' =
@@ -48,8 +44,8 @@ let edit_distance (type a) (compare : a -> a -> bool) (s : a array)
   edit_distance_helper (Array.length s) (Array.length t)
 
 let diff_words (s1 : string) (s2 : string) : line_content * line_content =
-  let words1 = Array.to_list (string_arr_to_words s1) in
-  let words2 = Array.to_list (string_arr_to_words s2) in
+  let words1 = Array.to_list (string_to_words s1) in
+  let words2 = Array.to_list (string_to_words s2) in
   let common = lcs words1 words2 in
 
   let rec construct_diff w1 w2 lcs acc_mine acc_their =
@@ -81,49 +77,11 @@ let diff_words (s1 : string) (s2 : string) : line_content * line_content =
 
   construct_diff words1 words2 common [] []
 
-let string_similarity s1 s2 =
-  let a1 = string_to_words s1 |> Array.of_list in
-  let a2 = string_to_words s2 |> Array.of_list in
-  let distance = edit_distance (=) a1 a2 in
-  let max_length = max (Array.length a1) (Array.length a2) in
-  1.0 -. (float_of_int distance /. float_of_int max_length)
-
-let pair_lines mine their =
-  let similarity_threshold = 0.5 in
-  let rec pair acc mine their =
-    match mine, their with
-    | [], [] -> List.rev acc
-    | [], t::ts -> pair ((("", t) :: acc)) [] ts
-    | m::ms, [] -> pair (((m, "") :: acc)) ms []
-    | m::ms, t::ts ->
-        let similarity = string_similarity m t in
-        if similarity > similarity_threshold then
-          pair ((m, t) :: acc) ms ts
-        else
-          let (best_m, best_t) = 
-            List.fold_left (fun (bm, bt) cur_t ->
-              let sim = string_similarity m cur_t in
-              if sim > similarity_threshold then (Some m, Some cur_t) else (bm, bt)
-            ) (None, None) their
-          in
-          match best_m, best_t with
-          | Some bm, Some bt ->
-              pair ((bm, bt) :: acc) ms (List.filter ((<>) bt) their)
-          | _ -> pair ((m, "") :: acc) ms their
-  in
-  pair [] mine their
-
 let compute (block : string Block.t) : line_content Block.t =
   match block with
-  | Block.Common line -> Block.Common [Unchanged line]
+  | Block.Common line -> Block.Common [ Unchanged line ]
   | Block.Changed { mine; their; order } ->
-      let paired_lines = pair_lines mine their in
-      let mine_content, their_content = 
-        List.split (List.map (fun (m, t) -> 
-          let m_words, t_words = diff_words m t in
-          (m_words, t_words)
-        ) paired_lines)
-      in
-      let mine_content = List.filter (fun l -> l <> []) mine_content in
-      let their_content = List.filter (fun l -> l <> []) their_content in
-      Block.Changed { mine = mine_content; their = their_content; order }
+      let mine_str = String.concat " " mine in
+      let their_str = String.concat " " their in
+      let mine_words, their_words = diff_words mine_str their_str in
+      Block.Changed { mine = [ mine_words ]; their = [ their_words ]; order }

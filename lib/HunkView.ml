@@ -4,7 +4,7 @@ module W = Nottui_widgets
 (* Constants and Formatting Functions *)
 let added_marker (content : Ui.t) : Ui.t = Ui.hcat [ W.string "+"; content ]
 let removed_marker (content : Ui.t) : Ui.t = Ui.hcat [ W.string "-"; content ]
-let unchanged_marker (content : Ui.t) : Ui.t = Ui.hcat [ W.string " "; content ]
+let unchanged_marker (content : Ui.t) : Ui.t = Ui.hcat [ W.string ""; content ]
 
 (* Types *)
 
@@ -92,12 +92,35 @@ let render_hunk_summary (hunk : string Patch.hunk) (mode : rendering_mode) :
     ]
 
 let render_line_number (mine_num : int) (their_num : int)
-    (diff_type : [ `Added | `Removed | `Unchanged ]) : Ui.t =
-  match diff_type with
-  | `Added -> W.string (Printf.sprintf "   %2d + " (their_num + 1))
-  | `Removed -> W.string (Printf.sprintf "%2d    - " (mine_num + 1))
-  | `Unchanged ->
-      W.string (Printf.sprintf "%2d %2d   " (mine_num + 1) (their_num + 1))
+    (diff_type : [ `Added | `Removed | `Unchanged ]) (mode : rendering_mode) :
+    Ui.t =
+  match mode with
+  | TextMarkers -> (
+      match diff_type with
+      | `Added -> W.string (Printf.sprintf "   %2d + " (their_num + 1))
+      | `Removed -> W.string (Printf.sprintf "%2d    - " (mine_num + 1))
+      | `Unchanged ->
+          W.string (Printf.sprintf "%2d %2d   " (mine_num + 1) (their_num + 1)))
+  | Color -> (
+      match diff_type with
+      | `Added ->
+          W.string
+            ~attr:Notty.A.(fg green)
+            (Printf.sprintf "   %2d + " (their_num + 1))
+      | `Removed ->
+          W.string
+            ~attr:Notty.A.(fg red)
+            (Printf.sprintf "%2d    - " (mine_num + 1))
+      | `Unchanged ->
+          Ui.hcat
+            [
+              W.string
+                ~attr:Notty.A.(fg cyan)
+                (Printf.sprintf "%2d " (mine_num + 1));
+              W.string
+                ~attr:Notty.A.(fg cyan)
+                (Printf.sprintf "%2d   " (their_num + 1));
+            ])
 
 let render_word_diff (words : WordDiff.word list)
     (diff_type : [ `Added | `Removed | `Unchanged ]) (mode : rendering_mode) :
@@ -111,7 +134,7 @@ let render_word_diff (words : WordDiff.word list)
 let render_diff_line (mine_num : int) (their_num : int)
     (diff_type : [ `Added | `Removed | `Unchanged ])
     (content : WordDiff.word list) (mode : rendering_mode) : Ui.t =
-  let line_number = render_line_number mine_num their_num diff_type in
+  let line_number = render_line_number mine_num their_num diff_type mode in
   let content_ui = render_word_diff content diff_type mode in
   Ui.hcat [ line_number; content_ui ]
 

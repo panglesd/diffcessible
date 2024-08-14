@@ -9,8 +9,8 @@ This is a cram test for the new executable.
    1  1   (executable 
    2  2    (public_name diffcessible) 
    3  3    (name main) 
-   4    - (libraries diffcessible cmdliner)) 
-      4 + (libraries diffcessible cmdliner patch)) 
+   4    -  (libraries diffcessible cmdliner)) 
+      4 +  (libraries diffcessible cmdliner patch)) 
   
   
   
@@ -30,10 +30,10 @@ This is a cram test for the new executable.
    1  1   open Diffcessible 
    2  2    
    3  3   let main () = 
-   4    - Interactive_viewer.start () 
-      4 + let s = In_channel.input_all In_channel.stdin in 
-      5 + let patch = Patch.to_diffs s in 
-      6 + Interactive_viewer.start patch 
+   4    -   Interactive_viewer.start () 
+      4 +   let s = In_channel.input_all In_channel.stdin in 
+      5 +   let patch = Patch.to_diffs s in 
+      6 +   Interactive_viewer.start patch 
    5  7    
    6  8   open Cmdliner 
    7  9    
@@ -50,8 +50,8 @@ This is a cram test for the new executable.
   @@ -1,3 +1,3 @@
    1  1   (library 
    2  2    (name diffcessible) 
-   3    - (libraries notty nottui lwd)) 
-      3 + (libraries notty nottui lwd patch)) 
+   3    -  (libraries notty nottui lwd)) 
+      3 +  (libraries notty nottui lwd patch)) 
   
   
   

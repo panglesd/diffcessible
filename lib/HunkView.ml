@@ -2,12 +2,8 @@ open Nottui
 module W = Nottui_widgets
 
 (* Constants and Formatting Functions *)
-let added_marker (content : Ui.t) : Ui.t =
-  Ui.hcat [ W.string "+" ~attr:Notty.A.(fg green); content ]
-
-let removed_marker (content : Ui.t) : Ui.t =
-  Ui.hcat [ W.string "-" ~attr:Notty.A.(fg red); content ]
-
+let added_marker (content : Ui.t) : Ui.t = Ui.hcat [ W.string "+"; content ]
+let removed_marker (content : Ui.t) : Ui.t = Ui.hcat [ W.string "-"; content ]
 let unchanged_marker (content : Ui.t) : Ui.t = Ui.hcat [ W.string " "; content ]
 
 (* Types *)
@@ -117,13 +113,7 @@ let render_diff_line (mine_num : int) (their_num : int)
     (content : WordDiff.word list) (mode : rendering_mode) : Ui.t =
   let line_number = render_line_number mine_num their_num diff_type in
   let content_ui = render_word_diff content diff_type mode in
-  let marker =
-    match diff_type with
-    | `Added -> added_marker
-    | `Removed -> removed_marker
-    | `Unchanged -> unchanged_marker
-  in
-  Ui.hcat [ line_number; marker content_ui ]
+  Ui.hcat [ line_number; content_ui ]
 
 let render_hunk_lines (hunk_lines : WordDiff.line_content Patch.line list)
     (mode : rendering_mode) : Ui.t =

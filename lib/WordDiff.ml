@@ -91,7 +91,7 @@ let pair_lines lines1 lines2 =
     done
   done;
 
-  (* Use a greedy approach to pair lines based on minimum distance *)
+  (* greedily pair lines based on minimum distance *)
   let paired = ref [] in
   let used1 = Array.make (Array.length lines1) false in
   let used2 = Array.make (Array.length lines2) false in
@@ -117,7 +117,6 @@ let pair_lines lines1 lines2 =
       used2.(!min_j) <- true)
   done;
 
-  (* Add unpaired lines *)
   let final_pairs = ref !paired in
   for i = 0 to Array.length lines1 - 1 do
     if not used1.(i) then final_pairs := (i, -1) :: !final_pairs

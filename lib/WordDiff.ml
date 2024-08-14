@@ -127,40 +127,6 @@ let pair_lines lines1 lines2 =
 
   List.sort compare !final_pairs
 
-let normalize_whitespace s =
-  let s = String.trim s in
-  let buf = Buffer.create (String.length s) in
-  let space_seen = ref false in
-  String.iter
-    (fun c ->
-      match c with
-      | ' ' | '\t' | '\n' | '\r' ->
-          if not !space_seen then (
-            Buffer.add_char buf ' ';
-            space_seen := true)
-      | _ ->
-          Buffer.add_char buf c;
-          space_seen := false)
-    s;
-  Buffer.contents buf
-
-let trim_empty_lines lines =
-  let is_empty line =
-    List.for_all (function Unchanged "" -> true | _ -> false) line
-  in
-  let rec trim_start = function
-    | [] -> []
-    | hd :: tl when is_empty hd -> trim_start tl
-    | lines -> lines
-  in
-  let rec trim_end = function
-    | [] -> []
-    | hd :: tl ->
-        let trimmed_tail = trim_end tl in
-        if trimmed_tail = [] && is_empty hd then [] else hd :: trimmed_tail
-  in
-  lines |> trim_start |> trim_end
-
 let compute (block : string Block.t) : line_content Block.t =
   match block with
   | Block.Common line -> Block.Common [ Unchanged line ]
@@ -172,32 +138,25 @@ let compute (block : string Block.t) : line_content Block.t =
       let result_mine = ref [] in
       let result_their = ref [] in
 
-      (* trim leading/trailing whitespace and collapse multiple spaces *)
       List.iter
         (fun (i, j) ->
           match (i, j) with
           | -1, j ->
-              let their_content = normalize_whitespace their_array.(j) in
-              if their_content <> "" then
-                result_their :=
-                  (diff_words "" their_content |> snd) :: !result_their
+              let their_content = their_array.(j) in
+              result_their :=
+                (diff_words "" their_content |> snd) :: !result_their
           | i, -1 ->
-              let mine_content = normalize_whitespace mine_array.(i) in
-              if mine_content <> "" then
-                result_mine :=
-                  (diff_words mine_content "" |> fst) :: !result_mine
+              let mine_content = mine_array.(i) in
+              result_mine := (diff_words mine_content "" |> fst) :: !result_mine
           | i, j ->
-              let mine_content = normalize_whitespace mine_array.(i) in
-              let their_content = normalize_whitespace their_array.(j) in
-              if mine_content <> "" || their_content <> "" then (
-                let mine_diff, their_diff =
-                  diff_words mine_content their_content
-                in
-                result_mine := mine_diff :: !result_mine;
-                result_their := their_diff :: !result_their))
+              let mine_content = mine_array.(i) in
+              let their_content = their_array.(j) in
+              let mine_diff, their_diff =
+                diff_words mine_content their_content
+              in
+              result_mine := mine_diff :: !result_mine;
+              result_their := their_diff :: !result_their)
         pairs;
 
-      let trimmed_mine = trim_empty_lines (List.rev !result_mine) in
-      let trimmed_their = trim_empty_lines (List.rev !result_their) in
-
-      Block.Changed { mine = trimmed_mine; their = trimmed_their; order }
+      Block.Changed
+        { mine = List.rev !result_mine; their = List.rev !result_their; order }

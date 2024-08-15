@@ -1,7 +1,6 @@
 type word = Unchanged of string | Changed of string
 type line_content = word list
 
-let string_to_word_array s = s |> String.split_on_char ' ' |> Array.of_list
 let string_to_words s = Array.of_list (String.split_on_char ' ' s)
 let longest xs ys = if List.length xs > List.length ys then xs else ys
 
@@ -86,8 +85,8 @@ let pair_lines lines1 lines2 =
     for j = 0 to Array.length lines2 - 1 do
       distances.(i).(j) <-
         edit_distance ( = )
-          (string_to_word_array lines1.(i))
-          (string_to_word_array lines2.(j))
+          (string_to_words lines1.(i))
+          (string_to_words lines2.(j))
     done
   done;
 

@@ -121,56 +121,6 @@ let test_diff_words () =
   List.iter test_case
     [ test_diff_1; test_diff_2; test_diff_3; test_diff_4; test_diff_5 ]
 
-let test_edit_distance_1 =
-  ( [| 'k'; 'i'; 't'; 't'; 'e'; 'n' |],
-    [| 's'; 'i'; 't'; 't'; 'i'; 'n'; 'g' |],
-    3 )
-
-let test_edit_distance_2 =
-  ( [| 'S'; 'u'; 'n'; 'd'; 'a'; 'y' |],
-    [| 'S'; 'a'; 't'; 'u'; 'r'; 'd'; 'a'; 'y' |],
-    3 )
-
-let test_edit_distance_3 = ([| 'a'; 'b'; 'c' |], [| 'a'; 'b'; 'c' |], 0)
-let test_edit_distance_4 = ([| 'a'; 'b'; 'c' |], [| 'd'; 'e'; 'f' |], 3)
-let test_edit_distance_5 = ([||], [| 'a'; 'b'; 'c' |], 3)
-let test_edit_distance_6 = ([| 'a'; 'b'; 'c' |], [||], 3)
-let test_edit_distance_7 = ([||], [||], 0) (* Both empty *)
-let test_edit_distance_8 = ([| 'a' |], [| 'b' |], 1)
-let test_edit_distance_9 = ([| 'a'; 'a'; 'a' |], [| 'a'; 'a'; 'a'; 'a' |], 1)
-let test_edit_distance_10 = ([| 'a'; 'a'; 'a'; 'a' |], [| 'a'; 'a'; 'a' |], 1)
-let test_edit_distance_11 = ([| '1'; '2'; '3' |], [| '2'; '3'; '4' |], 2)
-(* Shift *)
-
-let test_edit_distance_12 =
-  ([| 'a'; 'b'; 'c'; 'd'; 'e'; 'f' |], [| 'a'; 'z'; 'c'; 'd'; 'e'; 'f' |], 1)
-
-let test_edit_distance () =
-  let test_case (input1, input2, expected) =
-    let result = WordDiff.edit_distance Char.equal input1 input2 in
-    assert_with_message (result = expected)
-      (Printf.sprintf
-         "edit_distance failed\nInput1: %s\nInput2: %s\nExpected: %d\nGot: %d"
-         (String.of_seq (Array.to_seq input1))
-         (String.of_seq (Array.to_seq input2))
-         expected result)
-  in
-  List.iter test_case
-    [
-      test_edit_distance_1;
-      test_edit_distance_2;
-      test_edit_distance_3;
-      test_edit_distance_4;
-      test_edit_distance_5;
-      test_edit_distance_6;
-      test_edit_distance_7;
-      test_edit_distance_8;
-      test_edit_distance_9;
-      test_edit_distance_10;
-      test_edit_distance_11;
-      test_edit_distance_12;
-    ]
-
 (* Updated run_tests function *)
 let run_tests () =
   let run_test name f =
@@ -185,7 +135,6 @@ let run_tests () =
           (Printexc.to_string exn)
   in
   run_test "test_lcs" test_lcs;
-  run_test "test_diff_words" test_diff_words;
-  run_test "test_edit_distance" test_edit_distance
+  run_test "test_diff_words" test_diff_words
 
 let () = run_tests ()

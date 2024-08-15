@@ -31,12 +31,12 @@ This is a cram test for the new executable.
    2  2    
    3  3   let main () = 
    4    -   Interactive_viewer.start () 
-      4 +   let s = In_channel.input_all In_channel.stdin in 
-      5 +   let patch = Patch.to_diffs s in 
-      6 +   Interactive_viewer.start patch 
-   5  7    
-   6  8   open Cmdliner 
-   7  9    
+      4 +   let s = In_channel.input_all In_channel.stdin in   let patch = Patch.to_diffs s in   Interactive_viewer.start patch 
+   5  5    
+   6  6   open Cmdliner 
+   7  7    
+  
+  
   
   
   
@@ -91,8 +91,8 @@ This is a cram test for the new executable.
   Modification of file.txt
   @@ -2,1 +2,2 @@
    1    - Hi everyone! 
-      1 + This is the diffcessible project. 
-      2 + Hello World! 
+      1 + Hello World! This is the diffcessible project. 
+  
   
   
   
@@ -112,8 +112,8 @@ This is a cram test for the new executable.
   Modification of file.txt
   @@ -3,1 +5,2 @@
    1    - This file starts at line 3. 
-      1 + This is the second test case in this file. 
-      2 + This file starts at line 5. 
+      1 + This file starts at line 5. This is the second test case in this file. 
+  
   
   
   

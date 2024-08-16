@@ -6,10 +6,9 @@ type line = Change of string | Common of string | Empty
 type rendering_mode = Color | TextMarkers
 
 (* Utility Functions *)
-let line_marker (sign : string option) (content : Ui.t) : Ui.t =
-  match sign with
-  | Some s -> Ui.hcat [ W.string s; Ui.space 1 0; content ]
-  | None -> content
+
+let added_marker (content : Ui.t) : Ui.t = Ui.hcat [ W.string "+"; content ]
+let removed_marker (content : Ui.t) : Ui.t = Ui.hcat [ W.string "-"; content ]
 
 let split_and_align_hunk hunks : line list * line list =
   let rec process_hunk mine_acc their_acc = function
@@ -54,9 +53,9 @@ let style_word (word : string)
     match (mode, change_type) with
     | Color, `Added -> W.string ~attr:Notty.A.(fg green) word
     | Color, `Removed -> W.string ~attr:Notty.A.(fg red) word
-    | Color, `Unchanged -> W.string ~attr:Notty.A.(fg lightcyan) word
-    | TextMarkers, `Added -> W.string ("+" ^ word)
-    | TextMarkers, `Removed -> W.string ("-" ^ word)
+    | Color, `Unchanged -> W.string word
+    | TextMarkers, `Added -> added_marker (W.string word)
+    | TextMarkers, `Removed -> removed_marker (W.string word)
     | TextMarkers, `Unchanged -> W.string word
   in
   Ui.hcat [ styled_word; W.string " " ]
@@ -92,30 +91,21 @@ let render_hunk_summary (hunk : string Patch.hunk) (mode : rendering_mode) :
 let render_line_number (mine_num : int) (their_num : int)
     (diff_type : [ `Added | `Removed | `Unchanged ]) (mode : rendering_mode) :
     Ui.t =
-  let attr_option =
+  let attr =
     match mode with
     | TextMarkers -> None
     | Color -> (
         match diff_type with
         | `Added -> Some Notty.A.(fg green)
         | `Removed -> Some Notty.A.(fg red)
-        | `Unchanged -> Some Notty.A.(fg lightcyan))
+        | `Unchanged -> None)
   in
   match diff_type with
-  | `Added ->
-      W.string ?attr:attr_option (Printf.sprintf "   %2d + " (their_num + 1))
-  | `Removed ->
-      W.string ?attr:attr_option (Printf.sprintf "%2d    - " (mine_num + 1))
+  | `Added -> W.string ?attr (Printf.sprintf "   %2d + " (their_num + 1))
+  | `Removed -> W.string ?attr (Printf.sprintf "%2d    - " (mine_num + 1))
   | `Unchanged ->
-      if mode = Color then
-        Ui.hcat
-          [
-            W.string ?attr:attr_option (Printf.sprintf "%2d " (mine_num + 1));
-            W.string ?attr:attr_option (Printf.sprintf "%2d   " (their_num + 1));
-          ]
-      else
-        W.string ?attr:attr_option
-          (Printf.sprintf "%2d %2d   " (mine_num + 1) (their_num + 1))
+      W.string ?attr
+        (Printf.sprintf "%2d %2d   " (mine_num + 1) (their_num + 1))
 
 let render_word_diff (words : WordDiff.word list)
     (diff_type : [ `Added | `Removed | `Unchanged ]) (mode : rendering_mode) :
@@ -179,12 +169,7 @@ let lines_with_numbers (lines : line list) (attr_change : Notty.attr option)
           match line with
           | Common s ->
               let content = Printf.sprintf "%3d   %s" line_num s in
-              let attr =
-                match mode with
-                | Color -> Some Notty.A.(fg lightcyan)
-                | TextMarkers -> None
-              in
-              (W.string ?attr content, line_num + 1)
+              (W.string content, line_num + 1)
           | Change s ->
               let marker =
                 match change_type with
@@ -192,17 +177,20 @@ let lines_with_numbers (lines : line list) (attr_change : Notty.attr option)
                 | `Remove -> "-"
                 | `Unchanged -> " "
               in
-              let line_number = Printf.sprintf "%3d " line_num in
+              let line_number = Printf.sprintf "%3d" line_num in
               let content = s in
               ( (match mode with
                 | Color ->
                     W.string ?attr:attr_change
-                      (line_number ^ marker ^ " " ^ content)
+                      (Printf.sprintf "%s %s %s" line_number marker content)
                 | TextMarkers ->
                     Ui.hcat
                       [
-                        W.string line_number;
-                        line_marker (Some marker) (W.string content);
+                        W.string (line_number ^ " ");
+                        (match change_type with
+                        | `Add -> added_marker (W.string (" " ^ content))
+                        | `Remove -> removed_marker (W.string (" " ^ content))
+                        | `Unchanged -> W.string (" " ^ content));
                       ]),
                 line_num + 1 )
           | Empty -> (W.string "      ", line_num)

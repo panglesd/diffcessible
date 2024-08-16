@@ -379,7 +379,15 @@ This is a cram test for the new executable.
   
   Type 'h' to go to the help panel, 'q' to quit, 'n' to go to the next operation, 'p' to go to the previous operation. Press 't' to toggle view mode.
 
+# Test unified view with text markers (colorless)
+$ dummy_terminal example.diff r
 
+# Test side-by-side view with text markers (colorless)
+$ dummy_terminal example.diff t r
 
+# Test toggling between side-by-side and unified views
+$ dummy_terminal example.diff t t
 
+# Test toggling render mode (color/colorless)
+$ dummy_terminal example.diff r r
 

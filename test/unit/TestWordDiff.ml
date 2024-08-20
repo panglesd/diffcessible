@@ -12,8 +12,8 @@ let test_lcs_4 = ([], [], []) (* Empty lists *)
 
 let test_lcs_5 =
   ([ "a"; "a"; "b"; "b"; "c" ], [ "a"; "b"; "c"; "c" ], [ "a"; "b"; "c" ])
-(* Repeating elements *)
 
+(* Repeating elements *)
 let test_lcs_6 = ([ "a"; "b"; "c" ], [ "d"; "e"; "f" ], [])
 
 (* All different, same length *)
@@ -121,6 +121,7 @@ let test_diff_words () =
   List.iter test_case
     [ test_diff_1; test_diff_2; test_diff_3; test_diff_4; test_diff_5 ]
 
+(* Updated run_tests function *)
 let run_tests () =
   let run_test name f =
     try

@@ -5,17 +5,25 @@ open Lwd_infix
 type view_mode = SideBySide | Normal
 
 let view_mode : view_mode Lwd.var = Lwd.var Normal
+let render_mode : HunkView.rendering_mode Lwd.var = Lwd.var HunkView.Color
 
 let toggle_view_mode () : unit =
   match Lwd.peek view_mode with
   | Normal -> Lwd.set view_mode SideBySide
   | SideBySide -> Lwd.set view_mode Normal
 
+let toggle_render_mode () : unit =
+  match Lwd.peek render_mode with
+  | HunkView.Color -> Lwd.set render_mode HunkView.TextMarkers
+  | HunkView.TextMarkers -> Lwd.set render_mode HunkView.Color
+
 let help_visible = Lwd.var false
 let quit = Lwd.var false
 
 let toggle_help_visibility () =
   Lwd.set help_visible (not (Lwd.peek help_visible))
+
+let help_string = "[h]elp [q]uit [n/p]avigate [t]oggle view [r]ender mode"
 
 let view (patches : string Patch.t list) =
   let z_patches_var : string Patch.t Zipper.t Lwd.var =
@@ -24,10 +32,12 @@ let view (patches : string Patch.t list) =
     | None -> failwith "zipper_of_list: empty list"
   in
   let hunks_ui =
-    let$ mode = Lwd.get view_mode and$ z_patches = Lwd.get z_patches_var in
+    let$ mode = Lwd.get view_mode
+    and$ z_patches = Lwd.get z_patches_var
+    and$ render_mode = Lwd.get render_mode in
     match mode with
-    | Normal -> HunkView.current_hunks z_patches
-    | SideBySide -> HunkView.current_hunks_side_by_side z_patches
+    | Normal -> HunkView.current_hunks z_patches render_mode
+    | SideBySide -> HunkView.current_hunks_side_by_side z_patches render_mode
   in
   let curr_scroll_state = Lwd.var W.default_scroll_state in
   let change_scroll_state _action state =
@@ -83,11 +93,11 @@ let view (patches : string Patch.t list) =
                  | `ASCII 't', [] ->
                      toggle_view_mode ();
                      `Handled
+                 | `ASCII 'r', [] ->
+                     toggle_render_mode ();
+                     `Handled
                  | _ -> `Unhandled)
-               (W.string
-                  "Type 'h' to go to the help panel, 'q' to quit, 'n' to go to \
-                   the next operation, 'p' to go to the previous operation. \
-                   Press 't' to toggle view mode.");
+               (W.string help_string);
         ]
   in
   Lwd.return ui

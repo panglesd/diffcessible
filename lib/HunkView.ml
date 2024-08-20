@@ -147,15 +147,43 @@ let render_hunk_lines (hunk_lines : WordDiff.line_content Patch.line list)
   in
   Ui.vcat (process_lines 0 0 [] hunk_lines)
 
-let render_hunk (hunk : string Patch.hunk) (mode : rendering_mode) : Ui.t =
-  let content =
-    let blocks =
-      Block.of_hunk hunk.Patch.lines
-      |> List.map WordDiff.compute |> Block.to_hunk
+let render_hunk_without_word_diff (hunk : string Patch.hunk)
+    (mode : rendering_mode) : Ui.t =
+  let render_line mine_num their_num diff_type content =
+    let line_number = render_line_number mine_num their_num diff_type mode in
+    let content_ui =
+      style_text content
+        (match diff_type with
+        | `Added -> Notty.A.(fg green)
+        | `Removed -> Notty.A.(fg red)
+        | `Unchanged -> Notty.A.empty)
+        mode
     in
-    render_hunk_lines blocks mode
+    Ui.hcat [ line_number; content_ui ]
   in
-  Ui.vcat [ content ]
+  let rec process_lines mine_num their_num acc = function
+    | [] -> List.rev acc
+    | line :: rest ->
+        let new_mine, new_their, ui =
+          match line with
+          | `Common content ->
+              ( mine_num + 1,
+                their_num + 1,
+                render_line mine_num their_num `Unchanged content )
+          | `Mine content ->
+              ( mine_num + 1,
+                their_num,
+                render_line mine_num their_num `Removed content )
+          | `Their content ->
+              ( mine_num,
+                their_num + 1,
+                render_line mine_num their_num `Added content )
+        in
+        process_lines new_mine new_their (ui :: acc) rest
+  in
+  Ui.vcat
+    (process_lines hunk.Patch.mine_start hunk.Patch.their_start []
+       hunk.Patch.lines)
 
 (* Helper functions for side-by-side view *)
 
@@ -225,7 +253,7 @@ let ui_unified_diff (hunk : string Patch.hunk) (mode : rendering_mode) : Ui.t =
       let word_diff_blocks = List.map WordDiff.compute blocks in
       let word_diff_lines = Block.to_hunk word_diff_blocks in
       render_hunk_lines word_diff_lines mode
-    else render_hunk hunk mode
+    else render_hunk_without_word_diff hunk mode
   in
   Ui.vcat [ hunk_summary; hunk_content ]
 

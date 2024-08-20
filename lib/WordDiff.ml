@@ -17,6 +17,59 @@ let lcs xs' ys' =
   done;
   a.(0).(0)
 
+let edit_distance (type a) (compare : a -> a -> bool) (s : a array)
+    (t : a array) : int =
+  let memo = Hashtbl.create ((Array.length s + 1) * (Array.length t + 1)) in
+
+  let rec edit_distance_helper i j =
+    match (i, j) with
+    | 0, x | x, 0 -> x
+    | i, j -> (
+        match Hashtbl.find_opt memo (i, j) with
+        | Some result -> result
+        | None ->
+            let result =
+              let cost_to_drop_both =
+                if compare s.(i - 1) t.(j - 1) then 0 else 1
+              in
+              min
+                (min
+                   (edit_distance_helper (i - 1) j + 1)
+                   (edit_distance_helper i (j - 1) + 1))
+                (edit_distance_helper (i - 1) (j - 1) + cost_to_drop_both)
+            in
+            Hashtbl.add memo (i, j) result;
+            result)
+  in
+  edit_distance_helper (Array.length s) (Array.length t)
+
+let pair_lines threshold lines1 lines2 =
+  let rec pair i j acc =
+    match (i < Array.length lines1, j < Array.length lines2) with
+    | true, true ->
+        let cost =
+          edit_distance
+            (fun c1 c2 -> c1 = c2)
+            (Array.of_seq (String.to_seq lines1.(i)))
+            (Array.of_seq (String.to_seq lines2.(j)))
+        in
+        if cost <= threshold then
+          pair (i + 1) (j + 1) ((Some lines1.(i), Some lines2.(j)) :: acc)
+        else if
+          i + 1 < Array.length lines1
+          && edit_distance
+               (fun c1 c2 -> c1 = c2)
+               (Array.of_seq (String.to_seq lines1.(i + 1)))
+               (Array.of_seq (String.to_seq lines2.(j)))
+             <= threshold
+        then pair (i + 1) j ((Some lines1.(i), None) :: acc)
+        else pair i (j + 1) ((None, Some lines2.(j)) :: acc)
+    | true, false -> pair (i + 1) j ((Some lines1.(i), None) :: acc)
+    | false, true -> pair i (j + 1) ((None, Some lines2.(j)) :: acc)
+    | false, false -> List.rev acc
+  in
+  pair 0 0 []
+
 let diff_words (s1 : string) (s2 : string) : line_content * line_content =
   let words1 = Array.to_list (string_to_words s1) in
   let words2 = Array.to_list (string_to_words s2) in
@@ -55,7 +108,20 @@ let compute (block : string Block.t) : line_content Block.t =
   match block with
   | Block.Common line -> Block.Common [ Unchanged line ]
   | Block.Changed { mine; their; order } ->
-      let mine_str = String.concat " " mine in
-      let their_str = String.concat " " their in
-      let mine_words, their_words = diff_words mine_str their_str in
-      Block.Changed { mine = [ mine_words ]; their = [ their_words ]; order }
+      let threshold = 1 in
+      (* testing threshold *)
+      let paired_lines =
+        pair_lines threshold (Array.of_list mine) (Array.of_list their)
+      in
+      let diff_lines =
+        List.map
+          (fun (line1, line2) ->
+            match (line1, line2) with
+            | Some l1, Some l2 -> diff_words l1 l2
+            | Some l1, None -> ([ Changed l1 ], [])
+            | None, Some l2 -> ([], [ Changed l2 ])
+            | None, None -> ([], []))
+          paired_lines
+      in
+      let mine_diff, their_diff = List.split diff_lines in
+      Block.Changed { mine = mine_diff; their = their_diff; order }

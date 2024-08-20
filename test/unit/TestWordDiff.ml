@@ -86,6 +86,19 @@ let string_of_diff_result (mine, their) =
 let assert_with_message condition message =
   if not condition then failwith message
 
+let test_diff_words () =
+  let test_case (input1, input2, expected) =
+    let result = WordDiff.diff_words input1 input2 in
+    assert_with_message (result = expected)
+      (Printf.sprintf
+         "diff_words failed\nInput1: %S\nInput2: %S\nExpected: %s\nGot: %s"
+         input1 input2
+         (string_of_diff_result expected)
+         (string_of_diff_result result))
+  in
+  List.iter test_case
+    [ test_diff_1; test_diff_2; test_diff_3; test_diff_4; test_diff_5 ]
+
 let test_lcs () =
   let test_case (input1, input2, expected) =
     let result = WordDiff.lcs input1 input2 in
@@ -108,20 +121,168 @@ let test_lcs () =
       test_lcs_8;
     ]
 
-let test_diff_words () =
+let test_edit_distance_1 =
+  ( [| 'k'; 'i'; 't'; 't'; 'e'; 'n' |],
+    [| 's'; 'i'; 't'; 't'; 'i'; 'n'; 'g' |],
+    3 )
+
+let test_edit_distance_2 =
+  ( [| 'S'; 'u'; 'n'; 'd'; 'a'; 'y' |],
+    [| 'S'; 'a'; 't'; 'u'; 'r'; 'd'; 'a'; 'y' |],
+    3 )
+
+let test_edit_distance_3 = ([| 'a'; 'b'; 'c' |], [| 'a'; 'b'; 'c' |], 0)
+let test_edit_distance_4 = ([| 'a'; 'b'; 'c' |], [| 'd'; 'e'; 'f' |], 3)
+let test_edit_distance_5 = ([||], [| 'a'; 'b'; 'c' |], 3)
+let test_edit_distance_6 = ([| 'a'; 'b'; 'c' |], [||], 3)
+let test_edit_distance_7 = ([||], [||], 0) (* Both empty *)
+let test_edit_distance_8 = ([| 'a' |], [| 'b' |], 1)
+let test_edit_distance_9 = ([| 'a'; 'a'; 'a' |], [| 'a'; 'a'; 'a'; 'a' |], 1)
+let test_edit_distance_10 = ([| 'a'; 'a'; 'a'; 'a' |], [| 'a'; 'a'; 'a' |], 1)
+let test_edit_distance_11 = ([| '1'; '2'; '3' |], [| '2'; '3'; '4' |], 2)
+
+let test_edit_distance_12 =
+  ([| 'a'; 'b'; 'c'; 'd'; 'e'; 'f' |], [| 'a'; 'z'; 'c'; 'd'; 'e'; 'f' |], 1)
+
+let test_edit_distance () =
   let test_case (input1, input2, expected) =
-    let result = WordDiff.diff_words input1 input2 in
+    let result = WordDiff.edit_distance Char.equal input1 input2 in
     assert_with_message (result = expected)
       (Printf.sprintf
-         "diff_words failed\nInput1: %S\nInput2: %S\nExpected: %s\nGot: %s"
-         input1 input2
-         (string_of_diff_result expected)
-         (string_of_diff_result result))
+         "edit_distance failed\nInput1: %s\nInput2: %s\nExpected: %d\nGot: %d"
+         (String.of_seq (Array.to_seq input1))
+         (String.of_seq (Array.to_seq input2))
+         expected result)
   in
   List.iter test_case
-    [ test_diff_1; test_diff_2; test_diff_3; test_diff_4; test_diff_5 ]
+    [
+      test_edit_distance_1;
+      test_edit_distance_2;
+      test_edit_distance_3;
+      test_edit_distance_4;
+      test_edit_distance_5;
+      test_edit_distance_6;
+      test_edit_distance_7;
+      test_edit_distance_8;
+      test_edit_distance_9;
+      test_edit_distance_10;
+      test_edit_distance_11;
+      test_edit_distance_12;
+    ]
 
-(* Updated run_tests function *)
+let test_pair_lines_1 =
+  ( [| "foo"; "bar baz" |],
+    [| "bar bat" |],
+    [ (Some "foo", None); (Some "bar baz", Some "bar bat") ] )
+
+let test_pair_lines_2 =
+  ( [| "line1"; "line2"; "line3 old" |],
+    [| "line1 new"; "line2"; "line3 updated" |],
+    [
+      (Some "line1", Some "line1 new");
+      (Some "line2", Some "line2");
+      (Some "line3 old", Some "line3 updated");
+    ] )
+
+let test_pair_lines_3 =
+  ( [| "a"; "b"; "c" |],
+    [| "x"; "y"; "z" |],
+    [ (Some "a", Some "x"); (Some "b", Some "y"); (Some "c", Some "z") ] )
+
+let test_pair_lines_4 =
+  ( [| "same"; "line"; "different" |],
+    [| "same"; "line"; "changed" |],
+    [
+      (Some "same", Some "same");
+      (Some "line", Some "line");
+      (Some "different", Some "changed");
+    ] )
+
+let test_pair_lines_5 =
+  ( [| "extra"; "lines"; "here" |],
+    [| "lines" |],
+    [ (Some "extra", None); (Some "lines", Some "lines"); (Some "here", None) ]
+  )
+
+let test_pair_lines_6 =
+  ( [| "A"; "B"; "C" |],
+    [| "B"; "D" |],
+    [
+      (Some "A", None); (Some "B", Some "B"); (Some "C", None); (None, Some "D");
+    ] )
+
+let test_pair_lines_7 =
+  ( [| "This"; "is"; "a"; "test" |],
+    [| "This"; "was"; "a"; "test" |],
+    [
+      (Some "This", Some "This");
+      (Some "is", Some "was");
+      (Some "a", Some "a");
+      (Some "test", Some "test");
+    ] )
+
+let test_pair_lines_8 =
+  ( [| "One"; "Two"; "Three" |],
+    [| "1"; "2"; "3" |],
+    [ (Some "One", Some "1"); (Some "Two", Some "2"); (Some "Three", Some "3") ]
+  )
+
+let test_pair_lines_9 =
+  ( [| "Hello"; "World" |],
+    [| "Hello"; "there"; "World" |],
+    [
+      (Some "Hello", Some "Hello");
+      (None, Some "there");
+      (Some "World", Some "World");
+    ] )
+
+let test_pair_lines_10 =
+  ( [| "First"; "Second"; "Third"; "Fourth" |],
+    [| "1st"; "2nd"; "3rd" |],
+    [
+      (Some "First", Some "1st");
+      (Some "Second", Some "2nd");
+      (Some "Third", Some "3rd");
+      (Some "Fourth", None);
+    ] )
+
+let string_of_option = function
+  | Some s -> Printf.sprintf "Some %S" s
+  | None -> "None"
+
+let string_of_pair (a, b) =
+  Printf.sprintf "(%s, %s)" (string_of_option a) (string_of_option b)
+
+let string_of_paired_lines pairs =
+  "[" ^ String.concat "; " (List.map string_of_pair pairs) ^ "]"
+
+let test_pair_lines () =
+  let test_case name (input1, input2, expected) =
+    let result = WordDiff.pair_lines 3 input1 input2 in
+    assert_with_message (result = expected)
+      (Printf.sprintf "%s failed\nInput1: %s\nInput2: %s\nExpected: %s\nGot: %s"
+         name
+         (String.concat " " (Array.to_list input1))
+         (String.concat " " (Array.to_list input2))
+         (string_of_paired_lines expected)
+         (string_of_paired_lines result))
+  in
+  List.iter
+    (fun (name, test) -> test_case name test)
+    [
+      ("test_pair_lines_1", test_pair_lines_1);
+      ("test_pair_lines_2", test_pair_lines_2);
+      ("test_pair_lines_3", test_pair_lines_3);
+      ("test_pair_lines_4", test_pair_lines_4);
+      ("test_pair_lines_5", test_pair_lines_5);
+      ("test_pair_lines_6", test_pair_lines_6);
+      ("test_pair_lines_7", test_pair_lines_7);
+      ("test_pair_lines_8", test_pair_lines_8);
+      ("test_pair_lines_9", test_pair_lines_9);
+      ("test_pair_lines_10", test_pair_lines_10);
+    ]
+
+(* Update the run_tests function to include all tests *)
 let run_tests () =
   let run_test name f =
     try
@@ -135,6 +296,8 @@ let run_tests () =
           (Printexc.to_string exn)
   in
   run_test "test_lcs" test_lcs;
-  run_test "test_diff_words" test_diff_words
+  run_test "test_diff_words" test_diff_words;
+  run_test "test_edit_distance" test_edit_distance;
+  run_test "test_pair_lines" test_pair_lines
 
 let () = run_tests ()

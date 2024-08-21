@@ -246,6 +246,103 @@ let test_pair_lines_10 =
       (Some "Fourth", None);
     ] )
 
+let test_pair_lines_11 =
+  ( [| "first_line"; "second_line" |],
+    [| "second_lines"; "first_lines" |],
+    [
+      (None, Some "second_lines");
+      (Some "first_line", Some "first_lines");
+      (Some "second_line", None);
+    ] )
+
+let test_pair_lines_12 =
+  ( [| "first_line"; "second_line" |],
+    [| "second_lines"; "first_lines" |],
+    [
+      (Some "first_line", None);
+      (Some "second_line", Some "second_lines");
+      (None, Some "first_lines");
+    ] )
+
+let test_pair_lines_13 =
+  ( [| "first_line"; "second_line" |],
+    [| "second_line"; "first_line" |],
+    [
+      (None, Some "second_line");
+      (Some "first_line", Some "first_line");
+      (Some "second_line", None);
+    ] )
+
+let test_pair_lines_14 =
+  ( [| "A"; "B"; "C" |],
+    [| "A"; "C"; "B" |],
+    [
+      (Some "A", Some "A");
+      (Some "B", None);
+      (Some "C", Some "C");
+      (None, Some "B");
+    ] )
+
+let test_pair_lines_15 =
+  ( [| "X"; "Y"; "Z" |],
+    [| "Z"; "X"; "Y" |],
+    [
+      (Some "X", None);
+      (Some "Y", None);
+      (Some "Z", Some "Z");
+      (None, Some "X");
+      (None, Some "Y");
+    ] )
+
+let test_pair_lines_16 =
+  ( [| "1"; "2"; "3"; "4" |],
+    [| "4"; "2"; "1"; "3" |],
+    [
+      (Some "1", None);
+      (Some "2", Some "2");
+      (Some "3", None);
+      (Some "4", Some "4");
+      (None, Some "1");
+      (None, Some "3");
+    ] )
+
+let test_pair_lines_17 =
+  ( [| "alpha"; "beta"; "gamma"; "delta" |],
+    [| "beta"; "delta"; "omega"; "alpha" |],
+    [
+      (Some "alpha", None);
+      (Some "beta", Some "beta");
+      (Some "gamma", None);
+      (Some "delta", Some "delta");
+      (None, Some "omega");
+      (None, Some "alpha");
+    ] )
+
+(*
+  The pairing algorithm is exactly the same as the algorithm we use to find word-level diffs. 
+  However instead of exact equality, we use approximate equality, which is to be close
+  enough to the edit distance. 
+
+  We need to specify a threshold for the edit distance to be X much, where X is a function of the input.
+  So the point of this number is to turn the approximate equality function into a bool function.
+
+  Create a general diff module for this, and WordDiff calls this function from this general module.
+*)
+
+(*
+  What breaking the order means when pairing lines:
+    Pairing in increasing order
+    Ordering:
+      A C
+      B D
+      
+      NOT GOOD:
+      A D
+      B C
+
+    This will make it hard to display to the user what the diff comparison was like
+ *)
+
 let string_of_option = function
   | Some s -> Printf.sprintf "Some %S" s
   | None -> "None"
@@ -280,6 +377,13 @@ let test_pair_lines () =
       ("test_pair_lines_8", test_pair_lines_8);
       ("test_pair_lines_9", test_pair_lines_9);
       ("test_pair_lines_10", test_pair_lines_10);
+      ("test_pair_lines_11", test_pair_lines_11);
+      ("test_pair_lines_12", test_pair_lines_12);
+      ("test_pair_lines_13", test_pair_lines_13);
+      ("test_pair_lines_14", test_pair_lines_14);
+      ("test_pair_lines_15", test_pair_lines_15);
+      ("test_pair_lines_16", test_pair_lines_16);
+      ("test_pair_lines_17", test_pair_lines_17);
     ]
 
 (* Update the run_tests function to include all tests *)

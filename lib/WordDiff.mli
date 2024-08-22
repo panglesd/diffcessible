@@ -9,4 +9,4 @@ val diff_words : string -> string -> line_content * line_content
 val edit_distance : ('a -> 'a -> bool) -> 'a array -> 'a array -> int
 
 val pair_lines :
-  string array -> string array -> string option list * string option list
+  string array -> string array -> (string option * string option) list

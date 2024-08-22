@@ -26,16 +26,10 @@ let test_diff_1 =
       [ WordDiff.Unchanged "abc"; WordDiff.Changed "ghi" ] ) )
 
 let test_diff_2 =
-  ( "",
-    "abc def",
-    ([ WordDiff.Changed "" ], [ WordDiff.Changed "abc"; WordDiff.Changed "def" ])
-  )
+  ("", "abc def", ([WordDiff.Changed ""], [ WordDiff.Changed "abc"; WordDiff.Changed "def" ]))
 
 let test_diff_3 =
-  ( "abc def",
-    "",
-    ([ WordDiff.Changed "abc"; WordDiff.Changed "def" ], [ WordDiff.Changed "" ])
-  )
+  ("abc def", "", ([ WordDiff.Changed "abc"; WordDiff.Changed "def" ], [WordDiff.Changed ""]))
 
 let test_diff_4 =
   ( "abc def ghi",
@@ -98,99 +92,133 @@ let test_edit_distance_12 =
 let test_pair_lines_1 =
   ( [| "foo"; "bar baz" |],
     [| "bar bat" |],
-    ([ Some "foo"; Some "bar baz" ], [ None; Some "bar bat" ]) )
+    [ (Some "foo", None); (Some "bar baz", Some "bar bat") ] )
 
 let test_pair_lines_2 =
   ( [| "line1"; "line2"; "line3 old" |],
     [| "line1 new"; "line2"; "line3 updated" |],
-    ( [ Some "line1"; Some "line2"; Some "line3 old" ],
-      [ Some "line1 new"; Some "line2"; Some "line3 updated" ] ) )
+    [
+      (Some "line1", Some "line1 new");
+      (Some "line2", Some "line2");
+      (Some "line3 old", Some "line3 updated");
+    ] )
 
 let test_pair_lines_3 =
   ( [| "a"; "b"; "c" |],
     [| "x"; "y"; "z" |],
-    ([ Some "a"; Some "b"; Some "c" ], [ Some "x"; Some "y"; Some "z" ]) )
+    [ (Some "a", Some "x"); (Some "b", Some "y"); (Some "c", Some "z") ] )
 
 let test_pair_lines_4 =
   ( [| "same"; "line"; "different" |],
     [| "same"; "line"; "changed" |],
-    ( [ Some "same"; Some "line"; Some "different" ],
-      [ Some "same"; Some "line"; Some "changed" ] ) )
+    [
+      (Some "same", Some "same");
+      (Some "line", Some "line");
+      (Some "different", Some "changed");
+    ] )
 
 let test_pair_lines_5 =
   ( [| "extra"; "lines"; "here" |],
     [| "lines" |],
-    ([ Some "extra"; Some "lines"; Some "here" ], [ None; Some "lines"; None ])
+    [ (Some "extra", None); (Some "lines", Some "lines"); (Some "here", None) ]
   )
 
 let test_pair_lines_6 =
   ( [| "A"; "B"; "C" |],
     [| "B"; "D" |],
-    ([ Some "A"; Some "B"; Some "C" ], [ None; Some "B"; Some "D" ]) )
+    [ (Some "A", None); (Some "B", Some "B"); (Some "C", Some "D") ] )
 
 let test_pair_lines_7 =
   ( [| "This"; "is"; "a"; "test" |],
     [| "This"; "was"; "a"; "test" |],
-    ( [ Some "This"; Some "is"; Some "a"; Some "test" ],
-      [ Some "This"; Some "was"; Some "a"; Some "test" ] ) )
+    [
+      (Some "This", Some "This");
+      (Some "is", Some "was");
+      (Some "a", Some "a");
+      (Some "test", Some "test");
+    ] )
 
 let test_pair_lines_8 =
   ( [| "One"; "Two"; "Three" |],
     [| "1"; "2"; "3" |],
-    ([ Some "One"; Some "Two"; Some "Three" ], [ Some "1"; Some "2"; Some "3" ])
+    [ (Some "One", Some "1"); (Some "Two", Some "2"); (Some "Three", Some "3") ]
   )
 
 let test_pair_lines_9 =
   ( [| "Hello"; "World" |],
     [| "Hello"; "there"; "World" |],
-    ( [ Some "Hello"; None; Some "World" ],
-      [ Some "Hello"; Some "there"; Some "World" ] ) )
+    [
+      (Some "Hello", Some "Hello");
+      (None, Some "there");
+      (Some "World", Some "World");
+    ] )
 
 let test_pair_lines_10 =
   ( [| "First"; "Second"; "Third"; "Fourth" |],
     [| "1st"; "2nd"; "3rd" |],
-    ( [ Some "First"; Some "Second"; Some "Third"; Some "Fourth" ],
-      [ Some "1st"; Some "2nd"; Some "3rd"; None ] ) )
+    [
+      (Some "First", Some "1st");
+      (Some "Second", Some "2nd");
+      (Some "Third", Some "3rd");
+      (Some "Fourth", None);
+    ] )
 
 let test_pair_lines_11 =
   ( [| "first_line"; "second_line" |],
     [| "second_lines"; "first_lines" |],
-    ( [ None; Some "first_line"; Some "second_line" ],
-      [ Some "second_lines"; Some "first_lines"; None ] ) )
+    [
+      (None, Some "second_lines");
+      (Some "first_line", Some "first_lines");
+      (Some "second_line", None);
+    ] )
 
 let test_pair_lines_12 =
   ( [| "first_line"; "second_line" |],
     [| "second_lines"; "first_lines" |],
-    ( [ Some "first_line"; Some "second_line"; None ],
-      [ Some "second_lines"; None; Some "first_lines" ] ) )
+    [
+      (Some "first_line", Some "second_lines");
+      (Some "second_line", None);
+      (None, Some "first_lines");
+    ] )
 
 let test_pair_lines_13 =
   ( [| "first_line"; "second_line" |],
     [| "second_line"; "first_line" |],
-    ( [ None; Some "first_line"; Some "second_line" ],
-      [ Some "second_line"; Some "first_line"; None ] ) )
+    [
+      (None, Some "second_line");
+      (Some "first_line", Some "first_line");
+      (Some "second_line", None);
+    ] )
 
 let test_pair_lines_14 =
   ( [| "A"; "B"; "C" |],
     [| "A"; "C"; "B" |],
-    ([ Some "A"; Some "B"; Some "C" ], [ Some "A"; Some "C"; Some "B" ]) )
+    [ (Some "A", Some "A"); (Some "B", Some "C"); (Some "C", Some "B") ] )
 
 let test_pair_lines_15 =
   ( [| "X"; "Y"; "Z" |],
     [| "Z"; "X"; "Y" |],
-    ([ Some "X"; Some "Y"; Some "Z" ], [ Some "Z"; Some "X"; Some "Y" ]) )
+    [ (Some "X", Some "Z"); (Some "Y", Some "X"); (Some "Z", Some "Y") ] )
 
 let test_pair_lines_16 =
   ( [| "1"; "2"; "3"; "4" |],
     [| "4"; "2"; "1"; "3" |],
-    ( [ Some "1"; Some "2"; Some "3"; Some "4" ],
-      [ Some "4"; Some "2"; Some "1"; Some "3" ] ) )
+    [
+      (Some "1", Some "4");
+      (Some "2", Some "2");
+      (Some "3", Some "1");
+      (Some "4", Some "3");
+    ] )
 
 let test_pair_lines_17 =
   ( [| "alpha"; "beta"; "gamma"; "delta" |],
     [| "beta"; "delta"; "omega"; "alpha" |],
-    ( [ Some "alpha"; Some "beta"; Some "gamma"; Some "delta" ],
-      [ Some "beta"; Some "delta"; Some "omega"; Some "alpha" ] ) )
+    [
+      (Some "alpha", Some "beta");
+      (Some "beta", Some "delta");
+      (Some "gamma", Some "omega");
+      (Some "delta", Some "alpha");
+    ] )
 
 (* Helper functions *)
 let string_of_word = function
@@ -209,10 +237,14 @@ let string_of_option = function
   | Some s -> Printf.sprintf "Some %S" s
   | None -> "None"
 
-let string_of_paired_lines (mine, their) =
-  Printf.sprintf "([%s], [%s])"
-    (String.concat "; " (List.map string_of_option mine))
-    (String.concat "; " (List.map string_of_option their))
+let string_of_paired_lines pairs =
+  "["
+  ^ String.concat "; "
+      (List.map
+         (fun (x, y) ->
+           Printf.sprintf "(%s, %s)" (string_of_option x) (string_of_option y))
+         pairs)
+  ^ "]"
 
 let assert_with_message condition message =
   if not condition then failwith message

@@ -44,13 +44,12 @@ let edit_distance (type a) (compare : a -> a -> bool) (s : a array)
   edit_distance_aux (Array.length s) (Array.length t)
 
 let pair_lines (lines1 : string array) (lines2 : string array) :
-    (string option * string option) list =
+    string option list * string option list =
   let calculate_threshold (line1 : string) (line2 : string) : int =
     let len1 = String.length line1 in
     let len2 = String.length line2 in
     let max_len = max len1 len2 in
-    max 3 (max_len / 5)
-    (* Adjust this formula as needed *)
+    max 15 max_len
   in
 
   let is_approximately_equal (line1 : string) (line2 : string) : bool =
@@ -68,10 +67,7 @@ let pair_lines (lines1 : string array) (lines2 : string array) :
   let lines2 = Array.to_list lines2 in
   let common = lcs lines1 lines2 in
 
-  let rec pair_lines_aux (l1 : string list) (l2 : string list)
-      (lcs : string list) (acc_mine : string option list)
-      (acc_their : string option list) : string option list * string option list
-      =
+  let rec pair_lines_aux l1 l2 lcs acc_mine acc_their =
     match (l1, l2, lcs) with
     | [], [], [] -> (List.rev acc_mine, List.rev acc_their)
     | x :: xs, y :: ys, z :: zs -> (
@@ -79,23 +75,24 @@ let pair_lines (lines1 : string array) (lines2 : string array) :
         | true, true ->
             pair_lines_aux xs ys zs (Some x :: acc_mine) (Some y :: acc_their)
         | false, true ->
-            pair_lines_aux xs (y :: ys) (z :: zs) (Some x :: acc_mine) acc_their
+            pair_lines_aux xs (y :: ys) (z :: zs) (Some x :: acc_mine)
+              (None :: acc_their)
         | true, false ->
-            pair_lines_aux (x :: xs) ys (z :: zs) acc_mine (Some y :: acc_their)
+            pair_lines_aux (x :: xs) ys (z :: zs) (None :: acc_mine)
+              (Some y :: acc_their)
         | false, false ->
             pair_lines_aux xs ys (z :: zs) (Some x :: acc_mine)
               (Some y :: acc_their))
     | x :: xs, [], lcs ->
-        pair_lines_aux xs [] lcs (Some x :: acc_mine) acc_their
-    | [], y :: ys, lcs -> pair_lines_aux [] ys lcs acc_mine (Some y :: acc_their)
+        pair_lines_aux xs [] lcs (Some x :: acc_mine) (None :: acc_their)
+    | [], y :: ys, lcs ->
+        pair_lines_aux [] ys lcs (None :: acc_mine) (Some y :: acc_their)
     | x :: xs, y :: ys, [] ->
         pair_lines_aux xs ys [] (Some x :: acc_mine) (Some y :: acc_their)
     | [], [], _ :: _ -> assert false
     (* Since lcs is the longest common subsequence, this case cannot happen *)
   in
-
-  let mine, their = pair_lines_aux lines1 lines2 common [] [] in
-  List.combine mine their
+  pair_lines_aux lines1 lines2 common [] []
 
 let diff_words (s1 : string) (s2 : string) : line_content * line_content =
   let words1 = Array.to_list (string_to_words s1) in
@@ -131,24 +128,40 @@ let diff_words (s1 : string) (s2 : string) : line_content * line_content =
 
   construct_diff words1 words2 common [] []
 
-let compute (block : string block.t) : line_content block.t =
+let compute (block : string Block.t) : line_content Block.t =
   match block with
-  | block.common line -> block.common [ unchanged line ]
-  | block.changed { mine; their; order } ->
-      let threshold = 1 in
-      (* testing threshold *)
-      let paired_lines =
-        pair_lines threshold (array.of_list mine) (array.of_list their)
+  | Block.Common line -> Block.Common [ Unchanged line ]
+  | Block.Changed { mine; their; order } ->
+      let mine_array = Array.of_list mine in
+      let their_array = Array.of_list their in
+      let paired_mine, paired_their = pair_lines mine_array their_array in
+
+      let diff_words line1 line2 =
+        match (line1, line2) with
+        | Some l1, Some l2 -> diff_words l1 l2
+        | Some l, None | None, Some l ->
+            let words = String.split_on_char ' ' l in
+            (List.map (fun w -> Changed w) words, [])
+        | None, None -> ([], [])
       in
-      let diff_lines =
-        list.map
-          (fun (line1, line2) ->
-            match (line1, line2) with
-            | some l1, some l2 -> diff_words l1 l2
-            | some l1, none -> ([ changed l1 ], [])
-            | none, some l2 -> ([], [ changed l2 ])
-            | none, none -> ([], []))
-          paired_lines
+
+      let rec process_pairs mine_acc their_acc = function
+        | [], [] -> (List.rev mine_acc, List.rev their_acc)
+        | m :: ms, t :: ts ->
+            let mine_content, their_content = diff_words m t in
+            process_pairs (mine_content :: mine_acc)
+              (their_content :: their_acc)
+              (ms, ts)
+        | m :: ms, [] ->
+            let mine_content, _ = diff_words m None in
+            process_pairs (mine_content :: mine_acc) their_acc (ms, [])
+        | [], t :: ts ->
+            let _, their_content = diff_words None t in
+            process_pairs mine_acc (their_content :: their_acc) ([], ts)
       in
-      let mine_diff, their_diff = list.split diff_lines in
-      block.changed { mine = mine_diff; their = their_diff; order }
+
+      let mine_content, their_content =
+        process_pairs [] [] (paired_mine, paired_their)
+      in
+
+      Block.Changed { mine = mine_content; their = their_content; order }

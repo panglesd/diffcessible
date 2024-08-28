@@ -81,7 +81,7 @@ let is_approximately_equal s1 s2 =
   let compare_char c1 c2 = c1 = c2 in
   let s1_array = Array.of_seq (String.to_seq s1) in
   let s2_array = Array.of_seq (String.to_seq s2) in
-  let threshold = max 3 (max (String.length s1) (String.length s2) / 3) in
+  let threshold = max 3 (max (String.length s1) (String.length s2) / 5) in
   edit_distance compare_char s1_array s2_array <= threshold
 
 let lacs words1 words2 =
@@ -101,32 +101,35 @@ let lacs words1 words2 =
   done;
   List.rev dp.(m).(n)
 
+(*
+The LCAS does is try to find the two subsequences, one from each sequence, such that the elements of the two subsequences are pair-wise
+almost equal. So there is no notion of the best one, just the longest subsequence which is equivalent to finding the biggest pairing.
+This was my previous implementation (the greedy algorithm) of finding the pairing.
+*)
+
 let pair_lines (s1 : string array) (s2 : string array) :
     (string option * string option) list =
   let words1 = Array.to_list s1 in
   let words2 = Array.to_list s2 in
   let common = lacs words1 words2 in
 
-  let rec construct_pairs w1 w2 lcs acc =
-    match (w1, w2, lcs) with
+  let rec construct_pairs w1 w2 lacs acc =
+    match (w1, w2, lacs) with
     | [], [], [] -> List.rev acc
     | x :: xs, y :: ys, z :: zs -> (
         match (is_approximately_equal x z, is_approximately_equal y z) with
-        | true, true ->
-            construct_pairs xs ys zs ((Some x, Some y) :: acc)
+        | true, true -> construct_pairs xs ys zs ((Some x, Some y) :: acc)
         | false, true ->
             construct_pairs xs (y :: ys) (z :: zs) ((Some x, None) :: acc)
         | true, false ->
             construct_pairs (x :: xs) ys (z :: zs) ((None, Some y) :: acc)
         | false, false ->
             construct_pairs xs ys (z :: zs) ((Some x, Some y) :: acc))
-    | x :: xs, [], lcs ->
-        construct_pairs xs [] lcs ((Some x, None) :: acc)
-    | [], y :: ys, lcs ->
-        construct_pairs [] ys lcs ((None, Some y) :: acc)
-    | x :: xs, y :: ys, [] ->
-        construct_pairs xs ys [] ((Some x, Some y) :: acc)
+    | x :: xs, [], lacs -> construct_pairs xs [] lacs ((Some x, None) :: acc)
+    | [], y :: ys, lacs -> construct_pairs [] ys lacs ((None, Some y) :: acc)
+    | x :: xs, y :: ys, [] -> construct_pairs xs ys [] ((Some x, Some y) :: acc)
     | [], [], _ :: _ -> assert false
+    (* Since lacs is the longest almost common subsequence, this case cannot happen *)
   in
 
   construct_pairs words1 words2 common []
@@ -156,8 +159,5 @@ let compute (block : string Block.t) : line_content Block.t =
           ([], []) paired_lines
       in
 
-      Block.Changed {
-        mine = List.rev mine_content;
-        their = List.rev their_content;
-        order;
-      }
+      Block.Changed
+        { mine = List.rev mine_content; their = List.rev their_content; order }

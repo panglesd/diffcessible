@@ -242,7 +242,9 @@ let ui_unified_diff (hunk : string Patch.hunk) (mode : rendering_mode) : Ui.t =
   let hunk_content =
     let blocks = Block.of_hunk hunk.Patch.lines in
     let word_diff_blocks = List.map WordDiff.compute blocks in
-    let word_diff_lines = Block.to_hunk word_diff_blocks in
+    let word_diff_lines =
+      List.map Block.to_hunk word_diff_blocks |> List.concat
+    in
     render_hunk_lines word_diff_lines mode
   in
   Ui.vcat [ hunk_summary; hunk_content ]

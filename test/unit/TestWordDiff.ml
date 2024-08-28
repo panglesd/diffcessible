@@ -96,7 +96,7 @@ let test_pair_lines_1 =
 
 let test_pair_lines_2 =
   ( [| "line1"; "line2"; "line3 old" |],
-    [| "line1 new"; "line2"; "line3 updated" |],
+    [| "line1 n"; "line2"; "line3 updated" |],
     [
       (Some "line1", Some "line1 new");
       (Some "line2", Some "line2");

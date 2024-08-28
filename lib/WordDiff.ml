@@ -81,7 +81,7 @@ let is_approximately_equal s1 s2 =
   let compare_char c1 c2 = c1 = c2 in
   let s1_array = Array.of_seq (String.to_seq s1) in
   let s2_array = Array.of_seq (String.to_seq s2) in
-  let threshold = max 3 (max (String.length s1) (String.length s2) / 5) in
+  let threshold = max 3 (max (String.length s1) (String.length s2) / 2) in
   edit_distance compare_char s1_array s2_array <= threshold
 
 let lacs words1 words2 =
@@ -89,11 +89,10 @@ let lacs words1 words2 =
   let dp = Array.make_matrix (m + 1) (n + 1) [] in
   for i = 1 to m do
     for j = 1 to n do
-      if
-        is_approximately_equal
-          (List.nth words1 (i - 1))
-          (List.nth words2 (j - 1))
-      then dp.(i).(j) <- List.nth words1 (i - 1) :: dp.(i - 1).(j - 1)
+      let c1 = List.nth words1 (i - 1) in
+      let c2 = List.nth words2 (j - 1) in
+      if is_approximately_equal c1 c2 then
+        dp.(i).(j) <- (c1, c2) :: dp.(i - 1).(j - 1)
       else if List.length dp.(i - 1).(j) > List.length dp.(i).(j - 1) then
         dp.(i).(j) <- dp.(i - 1).(j)
       else dp.(i).(j) <- dp.(i).(j - 1)
@@ -116,27 +115,25 @@ let pair_lines (s1 : string array) (s2 : string array) :
   let rec construct_pairs w1 w2 lacs acc =
     match (w1, w2, lacs) with
     | [], [], [] -> List.rev acc
-    | x :: xs, y :: ys, z :: zs -> (
-        match (is_approximately_equal x z, is_approximately_equal y z) with
+    | x :: xs, y :: ys, ((z1, z2) as z) :: zs -> (
+        match (String.equal x z1, String.equal y z2) with
         | true, true -> construct_pairs xs ys zs ((Some x, Some y) :: acc)
-        | false, true ->
+        | false, _ ->
             construct_pairs xs (y :: ys) (z :: zs) ((Some x, None) :: acc)
-        | true, false ->
-            construct_pairs (x :: xs) ys (z :: zs) ((None, Some y) :: acc)
-        | false, false ->
-            construct_pairs xs ys (z :: zs) ((Some x, Some y) :: acc))
+        | _, false ->
+            construct_pairs (x :: xs) ys (z :: zs) ((None, Some y) :: acc))
     | x :: xs, [], lacs -> construct_pairs xs [] lacs ((Some x, None) :: acc)
     | [], y :: ys, lacs -> construct_pairs [] ys lacs ((None, Some y) :: acc)
-    | x :: xs, y :: ys, [] -> construct_pairs xs ys [] ((Some x, Some y) :: acc)
+    | x :: xs, ys, [] -> construct_pairs xs ys [] ((Some x, None) :: acc)
     | [], [], _ :: _ -> assert false
     (* Since lacs is the longest almost common subsequence, this case cannot happen *)
   in
 
   construct_pairs words1 words2 common []
 
-let compute (block : string Block.t) : line_content Block.t =
+let compute (block : string Block.t) : line_content Block.t list =
   match block with
-  | Block.Common line -> Block.Common [ Unchanged line ]
+  | Block.Common line -> [ Block.Common [ Unchanged line ] ]
   | Block.Changed { mine; their; order } ->
       let mine_array = Array.of_list mine in
       let their_array = Array.of_list their in
@@ -144,20 +141,17 @@ let compute (block : string Block.t) : line_content Block.t =
 
       let diff_words line1 line2 =
         match (line1, line2) with
-        | Some l1, Some l2 -> diff_words l1 l2
-        | Some l, None | None, Some l ->
-            let words = String.split_on_char ' ' l in
-            (List.map (fun w -> Changed w) words, [])
-        | None, None -> ([], [])
+        | Some l1, Some l2 ->
+            let l1, l2 = diff_words l1 l2 in
+            Block.Changed { mine = [ l1 ]; their = [ l2 ]; order }
+        | Some l1, None ->
+            Block.Changed { mine = [ [ Changed l1 ] ]; their = []; order }
+        | None, Some l2 ->
+            Block.Changed { mine = []; their = [ [ Changed l2 ] ]; order }
+        | None, None -> assert false
       in
 
-      let mine_content, their_content =
-        List.fold_left
-          (fun (mine_acc, their_acc) (m, t) ->
-            let mine_diff, their_diff = diff_words m t in
-            (mine_diff :: mine_acc, their_diff :: their_acc))
-          ([], []) paired_lines
-      in
+      List.map (fun (m, t) -> diff_words m t) paired_lines
 
-      Block.Changed
-        { mine = List.rev mine_content; their = List.rev their_content; order }
+(* Block.Changed *)
+(*   { mine = List.rev mine_content; their = List.rev their_content; order } *)
